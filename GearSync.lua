@@ -125,13 +125,13 @@ local function OnEvent(self, event, ...)
 
     elseif event == "PLAYER_EQUIPMENT_CHANGED" then
         -- Equipment changed (equipped/unequipped item)
-        local slot = ...
+        local slot = arg1
         SaveData()
         -- Print(string.format("Equipment changed in slot: %s", SLOT_NAMES[slot] or slot))
 
     elseif event == "UNIT_INVENTORY_CHANGED" then
         -- Inventory changed
-        local unit = ...
+        local unit = arg1
         if unit == "player" then
             SaveData()
         end
