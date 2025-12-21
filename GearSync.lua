@@ -222,9 +222,19 @@ local function OnTooltipSetItem(tooltip)
     tooltip:Show()
 end
 
--- Hook both GameTooltip and ItemRefTooltip
-GameTooltip:HookScript("OnTooltipSetItem", OnTooltipSetItem)
-ItemRefTooltip:HookScript("OnTooltipSetItem", OnTooltipSetItem)
+-- Hook GameTooltip using Vanilla 1.12 method
+local function HookTooltip(tooltip)
+    local oldOnTooltipSetItem = tooltip:GetScript("OnTooltipSetItem")
+    tooltip:SetScript("OnTooltipSetItem", function()
+        if oldOnTooltipSetItem then
+            oldOnTooltipSetItem()
+        end
+        OnTooltipSetItem(this)
+    end)
+end
+
+HookTooltip(GameTooltip)
+HookTooltip(ItemRefTooltip)
 
 -- ============================================================================
 -- SLASH COMMANDS
