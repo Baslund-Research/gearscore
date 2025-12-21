@@ -81,8 +81,19 @@ end
 -- DATA PERSISTENCE
 -- ============================================================================
 
+-- Throttle SaveData to prevent spam
+local lastSaveTime = 0
+local SAVE_THROTTLE = 2  -- Only save once per 2 seconds
+
 -- Save current gear data to SavedVariables
 local function SaveData()
+    -- Throttle to prevent excessive saves
+    local currentTime = time()
+    if currentTime - lastSaveTime < SAVE_THROTTLE then
+        return
+    end
+    lastSaveTime = currentTime
+
     local equipment = ScanEquipment()
 
     GearSyncData = {
@@ -107,7 +118,7 @@ end
 -- ============================================================================
 
 -- Main event handler
-local function OnEvent(self, event, ...)
+local function OnEvent()
     if event == "PLAYER_ENTERING_WORLD" then
         -- Player logged in or entered world
         SaveData()
@@ -123,14 +134,8 @@ local function OnEvent(self, event, ...)
             Print(string.format("Loaded upgrade data for %d items", upgradeCount))
         end
 
-    elseif event == "PLAYER_EQUIPMENT_CHANGED" then
-        -- Equipment changed (equipped/unequipped item)
-        local slot = arg1
-        SaveData()
-        -- Print(string.format("Equipment changed in slot: %s", SLOT_NAMES[slot] or slot))
-
     elseif event == "UNIT_INVENTORY_CHANGED" then
-        -- Inventory changed
+        -- Inventory changed (includes equipment changes in Vanilla)
         local unit = arg1
         if unit == "player" then
             SaveData()
@@ -140,9 +145,8 @@ end
 
 frame:SetScript("OnEvent", OnEvent)
 
--- Register events
+-- Register events (Vanilla 1.12 compatible)
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-frame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 frame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 
 -- ============================================================================
@@ -171,10 +175,16 @@ local function FormatStatName(statKey)
     return string.upper(string.sub(formatted, 1, 1)) .. string.sub(formatted, 2)
 end
 
--- Hook GameTooltip to show upgrade data
-local function OnTooltipSetItem(tooltip)
+-- Track last tooltip to avoid duplicate additions
+local lastTooltipItem = nil
+
+-- Add upgrade data to tooltip
+local function AddUpgradeDataToTooltip(tooltip)
     local _, itemLink = tooltip:GetItem()
-    if not itemLink then return end
+    if not itemLink then
+        lastTooltipItem = nil
+        return
+    end
 
     -- Extract item ID from link
     local _, _, itemIdStr = string.find(itemLink, "item:(%d+)")
@@ -182,6 +192,10 @@ local function OnTooltipSetItem(tooltip)
 
     local itemId = tonumber(itemIdStr)
     if not itemId then return end
+
+    -- Prevent duplicate additions
+    if lastTooltipItem == itemId then return end
+    lastTooltipItem = itemId
 
     -- Check if we have upgrade data for this item
     local upgrade = GearSyncUpgrades[itemId]
@@ -222,19 +236,50 @@ local function OnTooltipSetItem(tooltip)
     tooltip:Show()
 end
 
--- Hook GameTooltip using Vanilla 1.12 method
-local function HookTooltip(tooltip)
-    local oldOnTooltipSetItem = tooltip:GetScript("OnTooltipSetItem")
-    tooltip:SetScript("OnTooltipSetItem", function()
-        if oldOnTooltipSetItem then
-            oldOnTooltipSetItem()
-        end
-        OnTooltipSetItem(this)
-    end)
-end
+-- Hook GameTooltip using OnUpdate (Vanilla 1.12 compatible)
+local tooltipUpdateDelay = 0
+local oldGameTooltipOnUpdate = GameTooltip:GetScript("OnUpdate")
 
-HookTooltip(GameTooltip)
-HookTooltip(ItemRefTooltip)
+GameTooltip:SetScript("OnUpdate", function()
+    -- Call original OnUpdate if it exists
+    if oldGameTooltipOnUpdate then
+        oldGameTooltipOnUpdate()
+    end
+
+    -- Throttle updates to every 0.1 seconds
+    tooltipUpdateDelay = tooltipUpdateDelay + arg1
+    if tooltipUpdateDelay > 0.1 then
+        tooltipUpdateDelay = 0
+
+        -- Check if tooltip is visible and has item data
+        if this:IsVisible() then
+            AddUpgradeDataToTooltip(this)
+        else
+            lastTooltipItem = nil
+        end
+    end
+end)
+
+-- Also hook ItemRefTooltip (for chat links)
+local itemRefUpdateDelay = 0
+local oldItemRefTooltipOnUpdate = ItemRefTooltip:GetScript("OnUpdate")
+
+ItemRefTooltip:SetScript("OnUpdate", function()
+    if oldItemRefTooltipOnUpdate then
+        oldItemRefTooltipOnUpdate()
+    end
+
+    itemRefUpdateDelay = itemRefUpdateDelay + arg1
+    if itemRefUpdateDelay > 0.1 then
+        itemRefUpdateDelay = 0
+
+        if this:IsVisible() then
+            AddUpgradeDataToTooltip(this)
+        else
+            lastTooltipItem = nil
+        end
+    end
+end)
 
 -- ============================================================================
 -- SLASH COMMANDS
