@@ -1,0 +1,9 @@
+## Interface: 11200
+## Title: GearSync
+## Notes: Syncs gear to TurtleLootLine and displays upgrade recommendations
+## Author: Ronni
+## Version: 1.0.0
+## SavedVariables: GearSyncData
+
+GearSync.lua
+UpgradeData.lua
