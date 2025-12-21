@@ -51,6 +51,15 @@ end
 -- EQUIPMENT SCANNING
 -- ============================================================================
 
+-- Extract item name from item link
+local function GetItemNameFromLink(itemLink)
+    if not itemLink then return nil end
+
+    -- Item link format: |cXXXXXXXX|Hitem:id:...|h[Item Name]|h|r
+    local _, _, itemName = string.find(itemLink, "%[(.+)%]")
+    return itemName
+end
+
 -- Scan all equipped gear and return equipment table
 local function ScanEquipment()
     local equipment = {}
@@ -61,7 +70,14 @@ local function ScanEquipment()
         if itemLink then
             local _, _, itemIdStr = string.find(itemLink, "item:(%d+)")
             local itemId = tonumber(itemIdStr)
-            local itemName = GetItemInfo(itemLink)
+
+            -- Extract name from link (more reliable than GetItemInfo in Vanilla)
+            local itemName = GetItemNameFromLink(itemLink)
+
+            -- Fallback to GetItemInfo if link parsing failed
+            if not itemName then
+                itemName = GetItemInfo(itemLink)
+            end
 
             if itemId and itemName then
                 equipment[slotId] = {
@@ -325,12 +341,22 @@ local function HandleSlashCommand(msg)
         local count = 0
         for itemId, data in pairs(GearSyncUpgrades) do
             count = count + 1
-            local itemName = GetItemInfo(itemId) or "Unknown"
+
+            -- Try to get item name, with fallback to ID if not cached
+            local itemName = GetItemInfo(itemId)
+            if not itemName then
+                itemName = "Item #" .. itemId
+            end
+
             local overall = data.overall or "N/A"
-            Print(string.format("%s (%d): %s", itemName, itemId, overall))
+            Print(string.format("%s: %s", itemName, overall))
 
             if count >= 10 then
-                Print("... and more. Total: " .. count .. " items")
+                local totalCount = 0
+                for _ in pairs(GearSyncUpgrades) do
+                    totalCount = totalCount + 1
+                end
+                Print(string.format("... and %d more items", totalCount - 10))
                 break
             end
         end
