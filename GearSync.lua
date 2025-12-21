@@ -53,7 +53,9 @@ end
 
 -- Extract item name from item link
 local function GetItemNameFromLink(itemLink)
-    if not itemLink then return nil end
+    if not itemLink or type(itemLink) ~= "string" or itemLink == "" then
+        return nil
+    end
 
     -- Item link format: |cXXXXXXXX|Hitem:id:...|h[Item Name]|h|r
     local _, _, itemName = string.find(itemLink, "%[(.+)%]")
@@ -102,10 +104,13 @@ local lastSaveTime = 0
 local SAVE_THROTTLE = 2  -- Only save once per 2 seconds
 
 -- Save current gear data to SavedVariables
-local function SaveData()
+local function SaveData(forceDebug)
     -- Throttle to prevent excessive saves
     local currentTime = time()
     if currentTime - lastSaveTime < SAVE_THROTTLE then
+        if forceDebug then
+            Print("SaveData throttled (wait " .. (SAVE_THROTTLE - (currentTime - lastSaveTime)) .. " seconds)")
+        end
         return
     end
     lastSaveTime = currentTime
@@ -126,7 +131,10 @@ local function SaveData()
         count = count + 1
     end
 
-    -- Print(string.format("Scanned %d equipped items", count))
+    if forceDebug then
+        Print(string.format("Saved %d equipped items to GearSyncData", count))
+        Print(string.format("Character: %s (%s)", UnitName("player"), GetRealmName()))
+    end
 end
 
 -- ============================================================================
@@ -137,8 +145,9 @@ end
 local function OnEvent()
     if event == "PLAYER_ENTERING_WORLD" then
         -- Player logged in or entered world
-        SaveData()
-        Print("Gear scanned! Desktop companion will sync automatically.")
+        -- Force a save immediately on login (bypass throttle)
+        lastSaveTime = 0  -- Reset throttle
+        SaveData(true)     -- Enable debug output
 
         -- Show upgrade count if available
         local upgradeCount = 0
@@ -148,6 +157,8 @@ local function OnEvent()
 
         if upgradeCount > 0 then
             Print(string.format("Loaded upgrade data for %d items", upgradeCount))
+        else
+            Print("Tip: Desktop companion will sync upgrade data")
         end
 
     elseif event == "UNIT_INVENTORY_CHANGED" then
@@ -185,6 +196,10 @@ end
 
 -- Format stat name for display
 local function FormatStatName(statKey)
+    if not statKey or type(statKey) ~= "string" then
+        return "Unknown"
+    end
+
     -- Convert camelCase to readable format
     local formatted = string.gsub(statKey, "([a-z])([A-Z])", "%1 %2")
     -- Capitalize first letter
@@ -305,8 +320,8 @@ local function HandleSlashCommand(msg)
     msg = string.lower(msg or "")
 
     if msg == "scan" or msg == "s" then
-        SaveData()
-        Print("Manual scan complete! Data saved.")
+        SaveData(true)  -- Pass true to enable debug output
+        Print("Manual scan complete!")
 
     elseif msg == "stats" or msg == "stat" then
         -- Show statistics
@@ -342,14 +357,20 @@ local function HandleSlashCommand(msg)
         for itemId, data in pairs(GearSyncUpgrades) do
             count = count + 1
 
-            -- Try to get item name, with fallback to ID if not cached
-            local itemName = GetItemInfo(itemId)
-            if not itemName then
-                itemName = "Item #" .. itemId
-            end
+            -- Ensure itemId is a number
+            local numericItemId = tonumber(itemId)
+            if not numericItemId then
+                Print("Warning: Invalid item ID: " .. tostring(itemId))
+            else
+                -- Try to get item name, with fallback to ID if not cached
+                local itemName = GetItemInfo(numericItemId)
+                if not itemName then
+                    itemName = "Item #" .. numericItemId
+                end
 
-            local overall = data.overall or "N/A"
-            Print(string.format("%s: %s", itemName, overall))
+                local overall = data.overall or "N/A"
+                Print(string.format("%s: %s", itemName, overall))
+            end
 
             if count >= 10 then
                 local totalCount = 0
@@ -365,11 +386,48 @@ local function HandleSlashCommand(msg)
             Print("No upgrade data loaded")
         end
 
+    elseif msg == "debug" or msg == "d" then
+        -- Show debug information
+        Print("--- Debug Information ---")
+
+        if not GearSyncData or not GearSyncData.character then
+            Print("|cFFFF0000GearSyncData is empty or not initialized!|r")
+            Print("Try running: /gs scan")
+        else
+            Print(string.format("Character: %s", GearSyncData.character or "nil"))
+            Print(string.format("Realm: %s", GearSyncData.realm or "nil"))
+            Print(string.format("Class: %s", GearSyncData.class or "nil"))
+            Print(string.format("Last Updated: %s", GearSyncData.lastUpdated or "nil"))
+
+            if GearSyncData.equipment then
+                local count = 0
+                for slotId, item in pairs(GearSyncData.equipment) do
+                    count = count + 1
+                end
+                Print(string.format("Equipment slots: %d", count))
+
+                -- Show first few items as examples
+                local shown = 0
+                for slotId, item in pairs(GearSyncData.equipment) do
+                    if shown < 3 then
+                        Print(string.format("  [%d] %s (%s)", slotId, item.itemName or "?", item.slot or "?"))
+                        shown = shown + 1
+                    end
+                end
+                if count > 3 then
+                    Print(string.format("  ... and %d more items", count - 3))
+                end
+            else
+                Print("|cFFFF0000No equipment data!|r")
+            end
+        end
+
     elseif msg == "help" or msg == "h" or msg == "?" then
         Print("--- Commands ---")
         Print("/gs scan - Manually scan and save equipped gear")
         Print("/gs stats - Show addon statistics")
         Print("/gs upgrades - List items with upgrade data")
+        Print("/gs debug - Show saved data (for troubleshooting)")
         Print("/gs clear - Clear saved data")
         Print("/gs help - Show this help")
 
