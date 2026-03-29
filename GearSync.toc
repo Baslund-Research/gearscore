@@ -2,8 +2,11 @@
 ## Title: GearSync
 ## Notes: Syncs gear to TurtleLootLine and displays upgrade recommendations
 ## Author: Ronni
-## Version: 1.0.1
+## Version: 1.1.0
+## SavedVariables: GearSyncLootDB
 ## SavedVariablesPerCharacter: GearSyncData
 
+TooltipParser.lua
+LootCollector.lua
 GearSync.lua
 UpgradeData.lua
