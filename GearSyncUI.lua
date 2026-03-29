@@ -13,6 +13,7 @@ local DEFAULTS = {
     minimapPos = 220,
     lootEnabled = true,
     talentsEnabled = true,
+    debugLog = true,
 }
 
 local function ApplyDefaults()
@@ -21,6 +22,9 @@ local function ApplyDefaults()
     end
     if GearSyncSettings.lootEnabled == nil then
         GearSyncSettings.lootEnabled = DEFAULTS.lootEnabled
+    end
+    if GearSyncSettings.debugLog == nil then
+        GearSyncSettings.debugLog = DEFAULTS.debugLog
     end
     if GearSyncSettings.talentsEnabled == nil then
         GearSyncSettings.talentsEnabled = DEFAULTS.talentsEnabled

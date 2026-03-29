@@ -43,6 +43,12 @@ local function Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r " .. msg)
 end
 
+-- Print only when debug logging is enabled in settings
+local function PrintDebug(msg)
+    if GearSyncSettings and GearSyncSettings.debugLog == false then return end
+    DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r " .. msg)
+end
+
 local function PrintError(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000[GearSync]|r " .. msg)
 end
@@ -174,7 +180,7 @@ local function SaveData(forceDebug)
             for _ in pairs(cachedTalentBuilds) do
                 buildCount = buildCount + 1
             end
-            Print(string.format("Active talents: %s (%d build(s) stored)", sig, buildCount))
+            PrintDebug(string.format("Active talents: %s (%d build(s) stored)", sig, buildCount))
         end
     end
 
@@ -185,8 +191,8 @@ local function SaveData(forceDebug)
     end
 
     if forceDebug then
-        Print(string.format("Saved %d equipped items to GearSyncData", count))
-        Print(string.format("Character: %s (%s)", UnitName("player"), GetRealmName()))
+        PrintDebug(string.format("Saved %d equipped items to GearSyncData", count))
+        PrintDebug(string.format("Character: %s (%s)", UnitName("player"), GetRealmName()))
     end
 end
 
@@ -256,9 +262,9 @@ local function OnEvent()
         end
 
         if upgradeCount > 0 then
-            Print(string.format("Loaded upgrade data for %d items", upgradeCount))
+            PrintDebug(string.format("Loaded upgrade data for %d items", upgradeCount))
         else
-            Print("Tip: Desktop companion will sync upgrade data")
+            PrintDebug("Tip: Desktop companion will sync upgrade data")
         end
 
     elseif event == "UNIT_INVENTORY_CHANGED" then
@@ -723,4 +729,4 @@ SlashCmdList["GEARSYNC"] = HandleSlashCommand
 -- INITIALIZATION
 -- ============================================================================
 
-Print("Loaded! Type /gs help for commands")
+PrintDebug("Loaded! Type /gs help for commands")
