@@ -137,7 +137,7 @@ end)
 
 local settingsFrame = CreateFrame("Frame", "GearSyncSettingsFrame", UIParent)
 settingsFrame:SetWidth(280)
-settingsFrame:SetHeight(344)
+settingsFrame:SetHeight(368)
 settingsFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 settingsFrame:SetFrameStrata("DIALOG")
 settingsFrame:SetMovable(true)
@@ -218,18 +218,40 @@ talentToggle:SetScript("OnClick", function()
 end)
 
 -- ============================================================================
+-- DEBUG LOG TOGGLE
+-- ============================================================================
+
+local debugToggle = CreateFrame("CheckButton", "GearSyncDebugToggle", settingsFrame, "OptionsCheckButtonTemplate")
+debugToggle:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -90)
+
+local debugToggleText = getglobal("GearSyncDebugToggleText")
+if debugToggleText then
+    debugToggleText:SetText("Show chat log messages")
+end
+
+debugToggle:SetScript("OnClick", function()
+    local checked = (this:GetChecked() == 1)
+    GearSyncSettings.debugLog = checked
+    if checked then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Chat log |cFF00FF00enabled|r")
+    else
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Chat log |cFFFF0000disabled|r")
+    end
+end)
+
+-- ============================================================================
 -- SECTION: ACTIONS
 -- ============================================================================
 
 local actionsLabel = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-actionsLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -96)
+actionsLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -120)
 actionsLabel:SetText("Actions")
 
 -- Scan Gear button
 local scanBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelButtonTemplate")
 scanBtn:SetWidth(240)
 scanBtn:SetHeight(22)
-scanBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -116)
+scanBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -140)
 scanBtn:SetText("Scan Gear")
 scanBtn:SetScript("OnClick", function()
     if GearSync_ManualScan then
@@ -242,7 +264,7 @@ end)
 local lootListBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelButtonTemplate")
 lootListBtn:SetWidth(240)
 lootListBtn:SetHeight(22)
-lootListBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -144)
+lootListBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -168)
 lootListBtn:SetText("Show Loot List")
 lootListBtn:SetScript("OnClick", function()
     if GearSyncLootListFrame:IsVisible() then
@@ -256,7 +278,7 @@ end)
 local lootStatsBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelButtonTemplate")
 lootStatsBtn:SetWidth(240)
 lootStatsBtn:SetHeight(22)
-lootStatsBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -172)
+lootStatsBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -196)
 lootStatsBtn:SetText("Loot DB Stats")
 lootStatsBtn:SetScript("OnClick", function()
     if GearSync_ShowLootDBStats then
@@ -268,7 +290,7 @@ end)
 local clearBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelButtonTemplate")
 clearBtn:SetWidth(240)
 clearBtn:SetHeight(22)
-clearBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -200)
+clearBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -224)
 clearBtn:SetText("Clear Loot DB (Shift+Click)")
 clearBtn:SetScript("OnClick", function()
     if IsShiftKeyDown() then
@@ -509,23 +531,23 @@ end
 -- ============================================================================
 
 local statusLabel = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-statusLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -234)
+statusLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -258)
 statusLabel:SetText("Status")
 
 local itemsText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-itemsText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -254)
+itemsText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -278)
 itemsText:SetText("Items collected: 0")
 
 local upgradesText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-upgradesText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -272)
+upgradesText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -296)
 upgradesText:SetText("Upgrades loaded: 0")
 
 local lootStatusText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-lootStatusText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -290)
+lootStatusText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -314)
 lootStatusText:SetText("Loot collection: ON")
 
 local pendingText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-pendingText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -308)
+pendingText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -332)
 pendingText:SetText("Pending items: 0")
 
 -- ============================================================================
@@ -579,6 +601,14 @@ initFrame:SetScript("OnEvent", function()
             talentToggle:SetChecked(1)
         else
             talentToggle:SetChecked(nil)
+        end
+    end
+
+    if debugToggle.SetChecked then
+        if GearSyncSettings.debugLog then
+            debugToggle:SetChecked(1)
+        else
+            debugToggle:SetChecked(nil)
         end
     end
 
