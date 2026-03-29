@@ -46,6 +46,11 @@ local function Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync Loot]|r " .. msg)
 end
 
+local function PrintDebug(msg)
+    if GearSyncSettings and GearSyncSettings.debugLog == false then return end
+    DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync Loot]|r " .. msg)
+end
+
 -- Extract item ID from an item link
 local function ExtractItemId(itemLink)
     if not itemLink then return nil end
@@ -124,7 +129,7 @@ local function ProcessItem(itemId, itemLink, sources)
     end
 
     -- [DEBUG] Log item type for troubleshooting (remove before release)
-    Print(string.format("[DEBUG] Item: %s | type: %s | subType: %s | quality: %s", tostring(name), tostring(itemType), tostring(itemSubType), tostring(quality)))
+    PrintDebug(string.format("[DEBUG] Item: %s | type: %s | subType: %s | quality: %s", tostring(name), tostring(itemType), tostring(itemSubType), tostring(quality)))
 
     -- Filter: only Armor and Weapon types
     if itemType ~= "Armor" and itemType ~= "Weapon" then
@@ -432,18 +437,18 @@ local function OnEvent()
         for _ in pairs(GearSyncLootDB.items) do
             count = count + 1
         end
-        Print(string.format("Loot database: %d items (scanning equipped + bags)", count))
+        PrintDebug(string.format("Loot database: %d items (scanning equipped + bags)", count))
 
     elseif event == "LOOT_OPENED" then
-        Print("[DEBUG] LOOT_OPENED fired")
+        PrintDebug("[DEBUG] LOOT_OPENED fired")
         OnLootOpened()
 
     elseif event == "CHAT_MSG_LOOT" then
-        Print("[DEBUG] CHAT_MSG_LOOT: " .. tostring(arg1))
+        PrintDebug("[DEBUG] CHAT_MSG_LOOT: " .. tostring(arg1))
         OnChatMsgLoot()
 
     elseif event == "CHAT_MSG_SYSTEM" then
-        Print("[DEBUG] CHAT_MSG_SYSTEM: " .. tostring(arg1))
+        PrintDebug("[DEBUG] CHAT_MSG_SYSTEM: " .. tostring(arg1))
         OnChatMsgSystem()
     end
 end
