@@ -12,6 +12,7 @@ GearSyncSettings = GearSyncSettings or {}
 local DEFAULTS = {
     minimapPos = 220,
     lootEnabled = true,
+    talentsEnabled = true,
 }
 
 local function ApplyDefaults()
@@ -20,6 +21,9 @@ local function ApplyDefaults()
     end
     if GearSyncSettings.lootEnabled == nil then
         GearSyncSettings.lootEnabled = DEFAULTS.lootEnabled
+    end
+    if GearSyncSettings.talentsEnabled == nil then
+        GearSyncSettings.talentsEnabled = DEFAULTS.talentsEnabled
     end
 end
 
@@ -129,7 +133,7 @@ end)
 
 local settingsFrame = CreateFrame("Frame", "GearSyncSettingsFrame", UIParent)
 settingsFrame:SetWidth(280)
-settingsFrame:SetHeight(320)
+settingsFrame:SetHeight(344)
 settingsFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 settingsFrame:SetFrameStrata("DIALOG")
 settingsFrame:SetMovable(true)
@@ -188,18 +192,40 @@ lootToggle:SetScript("OnClick", function()
 end)
 
 -- ============================================================================
+-- TALENT SYNC TOGGLE
+-- ============================================================================
+
+local talentToggle = CreateFrame("CheckButton", "GearSyncTalentToggle", settingsFrame, "OptionsCheckButtonTemplate")
+talentToggle:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -66)
+
+local talentToggleText = getglobal("GearSyncTalentToggleText")
+if talentToggleText then
+    talentToggleText:SetText("Enable talent sync")
+end
+
+talentToggle:SetScript("OnClick", function()
+    local checked = (this:GetChecked() == 1)
+    GearSyncSettings.talentsEnabled = checked
+    if checked then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Talent sync |cFF00FF00enabled|r")
+    else
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Talent sync |cFFFF0000disabled|r")
+    end
+end)
+
+-- ============================================================================
 -- SECTION: ACTIONS
 -- ============================================================================
 
 local actionsLabel = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-actionsLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -72)
+actionsLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -96)
 actionsLabel:SetText("Actions")
 
 -- Scan Gear button
 local scanBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelButtonTemplate")
 scanBtn:SetWidth(240)
 scanBtn:SetHeight(22)
-scanBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -92)
+scanBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -116)
 scanBtn:SetText("Scan Gear")
 scanBtn:SetScript("OnClick", function()
     if GearSync_ManualScan then
@@ -212,7 +238,7 @@ end)
 local lootListBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelButtonTemplate")
 lootListBtn:SetWidth(240)
 lootListBtn:SetHeight(22)
-lootListBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -120)
+lootListBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -144)
 lootListBtn:SetText("Show Loot List")
 lootListBtn:SetScript("OnClick", function()
     if GearSyncLootListFrame:IsVisible() then
@@ -226,7 +252,7 @@ end)
 local lootStatsBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelButtonTemplate")
 lootStatsBtn:SetWidth(240)
 lootStatsBtn:SetHeight(22)
-lootStatsBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -148)
+lootStatsBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -172)
 lootStatsBtn:SetText("Loot DB Stats")
 lootStatsBtn:SetScript("OnClick", function()
     if GearSync_ShowLootDBStats then
@@ -238,7 +264,7 @@ end)
 local clearBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelButtonTemplate")
 clearBtn:SetWidth(240)
 clearBtn:SetHeight(22)
-clearBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -176)
+clearBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -200)
 clearBtn:SetText("Clear Loot DB (Shift+Click)")
 clearBtn:SetScript("OnClick", function()
     if IsShiftKeyDown() then
@@ -370,6 +396,9 @@ end
 
 -- Scrollbar
 local scrollBar = CreateFrame("Slider", "GearSyncLootListScrollBar", lootListFrame, "UIPanelScrollBarTemplate")
+-- UIPanelScrollBarTemplate's OnValueChanged calls parent:SetVerticalScroll() which
+-- doesn't exist on a plain Frame. Provide a no-op so it doesn't error.
+lootListFrame.SetVerticalScroll = function() end
 scrollBar:SetPoint("TOPRIGHT", lootListFrame, "TOPRIGHT", -8, -72)
 scrollBar:SetPoint("BOTTOMRIGHT", lootListFrame, "BOTTOMRIGHT", -8, 16)
 scrollBar:SetWidth(16)
@@ -476,23 +505,23 @@ end
 -- ============================================================================
 
 local statusLabel = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-statusLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -210)
+statusLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -234)
 statusLabel:SetText("Status")
 
 local itemsText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-itemsText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -230)
+itemsText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -254)
 itemsText:SetText("Items collected: 0")
 
 local upgradesText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-upgradesText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -248)
+upgradesText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -272)
 upgradesText:SetText("Upgrades loaded: 0")
 
 local lootStatusText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-lootStatusText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -266)
+lootStatusText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -290)
 lootStatusText:SetText("Loot collection: ON")
 
 local pendingText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-pendingText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -284)
+pendingText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -308)
 pendingText:SetText("Pending items: 0")
 
 -- ============================================================================
@@ -532,12 +561,20 @@ initFrame:SetScript("OnEvent", function()
     ApplyDefaults()
     UpdateMinimapPosition()
 
-    -- Sync toggle state
+    -- Sync toggle states
     if lootToggle.SetChecked then
         if GearSyncSettings.lootEnabled then
             lootToggle:SetChecked(1)
         else
             lootToggle:SetChecked(nil)
+        end
+    end
+
+    if talentToggle.SetChecked then
+        if GearSyncSettings.talentsEnabled then
+            talentToggle:SetChecked(1)
+        else
+            talentToggle:SetChecked(nil)
         end
     end
 

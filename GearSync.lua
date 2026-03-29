@@ -96,12 +96,39 @@ local function ScanEquipment()
 end
 
 -- ============================================================================
+-- TALENT SCANNING
+-- ============================================================================
+
+-- Scan current talent build and return a signature + tree data
+local function ScanTalents()
+    local trees = {}
+    local summary = {}
+    for tab = 1, GetNumTalentTabs() do
+        local tabName = GetTalentTabInfo(tab)
+        local points = 0
+        local talents = {}
+        for i = 1, GetNumTalents(tab) do
+            local name, iconTexture, tier, column, rank, maxRank = GetTalentInfo(tab, i)
+            talents[i] = { name = name, rank = rank, maxRank = maxRank }
+            points = points + (rank or 0)
+        end
+        trees[tab] = { name = tabName, points = points, talents = talents }
+        table.insert(summary, tostring(points))
+    end
+    local signature = table.concat(summary, "/")  -- e.g. "21/30/0"
+    return signature, trees
+end
+
+-- ============================================================================
 -- DATA PERSISTENCE
 -- ============================================================================
 
 -- Throttle SaveData to prevent spam
 local lastSaveTime = 0
 local SAVE_THROTTLE = 2  -- Only save once per 2 seconds
+
+-- Cache talent builds across saves (SaveData overwrites GearSyncData entirely)
+local cachedTalentBuilds = {}
 
 -- Save current gear data to SavedVariables
 local function SaveData(forceDebug)
@@ -115,6 +142,11 @@ local function SaveData(forceDebug)
     end
     lastSaveTime = currentTime
 
+    -- Preserve existing talent builds before overwriting
+    if GearSyncData and GearSyncData.talents and GearSyncData.talents.builds then
+        cachedTalentBuilds = GearSyncData.talents.builds
+    end
+
     local equipment = ScanEquipment()
 
     GearSyncData = {
@@ -124,6 +156,27 @@ local function SaveData(forceDebug)
         class = UnitClass("player"),
         equipment = equipment
     }
+
+    -- Add talent data if enabled
+    if not GearSyncSettings or GearSyncSettings.talentsEnabled ~= false then
+        local sig, trees = ScanTalents()
+        cachedTalentBuilds[sig] = {
+            timestamp = time(),
+            trees = trees
+        }
+        GearSyncData.talents = {
+            active = sig,
+            builds = cachedTalentBuilds
+        }
+
+        if forceDebug then
+            local buildCount = 0
+            for _ in pairs(cachedTalentBuilds) do
+                buildCount = buildCount + 1
+            end
+            Print(string.format("Active talents: %s (%d build(s) stored)", sig, buildCount))
+        end
+    end
 
     -- Debug: count equipped items
     local count = 0
@@ -214,6 +267,12 @@ local function OnEvent()
         if unit == "player" then
             SaveData()
         end
+
+    elseif event == "CHARACTER_POINTS_CHANGED" then
+        -- Talent points changed (learned or reset talents)
+        if not GearSyncSettings or GearSyncSettings.talentsEnabled ~= false then
+            SaveData()
+        end
     end
 end
 
@@ -222,6 +281,7 @@ frame:SetScript("OnEvent", OnEvent)
 -- Register events (Vanilla 1.12 compatible)
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+frame:RegisterEvent("CHARACTER_POINTS_CHANGED")
 
 -- ============================================================================
 -- TOOLTIP HOOK FOR UPGRADE DISPLAY
