@@ -138,6 +138,53 @@ local function SaveData(forceDebug)
 end
 
 -- ============================================================================
+-- GLOBAL API (called by GearSyncUI)
+-- ============================================================================
+
+function GearSync_ManualScan()
+    SaveData(true)
+    Print("Manual scan complete!")
+end
+
+function GearSync_ShowLootList()
+    if not GearSyncLootDB or not GearSyncLootDB.items then
+        Print("Loot database not initialized")
+        return
+    end
+    Print("--- All Collected Items ---")
+    local count = 0
+    local qualityColors = {
+        [0] = "|cFF9D9D9D",
+        [1] = "|cFFFFFFFF",
+        [2] = "|cFF1EFF00",
+        [3] = "|cFF0070DD",
+        [4] = "|cFFA335EE",
+        [5] = "|cFFFF8000",
+    }
+    for itemId, item in pairs(GearSyncLootDB.items) do
+        count = count + 1
+        local color = qualityColors[item.quality] or "|cFFFFFFFF"
+        local slot = item.equipSlot or item.armorType or "?"
+        Print(string.format("  %s[%d] %s|r - %s", color, itemId, item.name or "?", slot))
+    end
+    Print(string.format("Total: %d items", count))
+end
+
+function GearSync_ShowLootDBStats()
+    if not GearSyncLootDB then
+        Print("Loot database not initialized")
+        return
+    end
+    local count = GearSync_GetLootDBCount and GearSync_GetLootDBCount() or 0
+    Print("--- Loot Database ---")
+    Print(string.format("Items collected: %d", count))
+    Print(string.format("DB version: %s", tostring(GearSyncLootDB.version or "N/A")))
+    if GearSyncLootDB.lastUpdated and GearSyncLootDB.lastUpdated > 0 then
+        Print(string.format("Last updated: %d seconds ago", time() - GearSyncLootDB.lastUpdated))
+    end
+end
+
+-- ============================================================================
 -- EVENT HANDLERS
 -- ============================================================================
 
@@ -210,80 +257,48 @@ end
 local currentTooltipItemLink = nil
 local lastTooltipItem = nil
 
--- Hook a tooltip method: call original, then store the item link via linkGetter
-local function HookTooltipSetMethod(tooltip, methodName, linkGetter)
-    local original = tooltip[methodName]
-    if not original then return end
-    tooltip[methodName] = function(self, a1, a2, a3)
-        original(self, a1, a2, a3)
-        currentTooltipItemLink = linkGetter(a1, a2, a3)
+-- Resolve item link from tooltip by reading its name and matching via GetItemInfo
+-- This avoids hooking any tooltip Set* methods which can break return values
+local function ResolveTooltipItemLink(tooltip)
+    local textLeft1 = tooltip:GetName() and getglobal(tooltip:GetName() .. "TextLeft1")
+    if not textLeft1 then return nil end
+
+    local itemName = textLeft1:GetText()
+    if not itemName or itemName == "" then return nil end
+
+    -- Try to find this item by scanning equipped slots first (most common tooltip case)
+    for slotId = 1, 19 do
+        local link = GetInventoryItemLink("player", slotId)
+        if link then
+            local _, _, name = string.find(link, "%[(.+)%]")
+            if name == itemName then
+                return link
+            end
+        end
     end
+
+    -- Try bag items
+    for bag = 0, 4 do
+        local numSlots = GetContainerNumSlots(bag)
+        if numSlots then
+            for slot = 1, numSlots do
+                local link = GetContainerItemLink(bag, slot)
+                if link then
+                    local _, _, name = string.find(link, "%[(.+)%]")
+                    if name == itemName then
+                        return link
+                    end
+                end
+            end
+        end
+    end
+
+    return nil
 end
-
--- Hook GameTooltip item-setting methods to capture the item link
-HookTooltipSetMethod(GameTooltip, "SetBagItem", function(bag, slot)
-    return GetContainerItemLink(bag, slot)
-end)
-
-HookTooltipSetMethod(GameTooltip, "SetInventoryItem", function(unit, slot)
-    return GetInventoryItemLink(unit, slot)
-end)
-
-HookTooltipSetMethod(GameTooltip, "SetLootItem", function(slot)
-    return GetLootSlotLink(slot)
-end)
-
-HookTooltipSetMethod(GameTooltip, "SetQuestItem", function(itemType, index)
-    if GetQuestItemLink then return GetQuestItemLink(itemType, index) end
-    return nil
-end)
-
-HookTooltipSetMethod(GameTooltip, "SetQuestLogItem", function(itemType, index)
-    if GetQuestLogItemLink then return GetQuestLogItemLink(itemType, index) end
-    return nil
-end)
-
-HookTooltipSetMethod(GameTooltip, "SetMerchantItem", function(index)
-    if GetMerchantItemLink then return GetMerchantItemLink(index) end
-    return nil
-end)
-
-HookTooltipSetMethod(GameTooltip, "SetCraftItem", function(index, reagent)
-    if GetCraftItemLink then return GetCraftItemLink(index) end
-    return nil
-end)
-
-HookTooltipSetMethod(GameTooltip, "SetTradeSkillItem", function(index, reagent)
-    if GetTradeSkillItemLink then return GetTradeSkillItemLink(index) end
-    return nil
-end)
-
-HookTooltipSetMethod(GameTooltip, "SetHyperlink", function(link)
-    if link and string.find(link, "^item:") then
-        local _, _, itemId = string.find(link, "item:(%d+)")
-        if itemId then
-            local name, itemLink = GetItemInfo(tonumber(itemId))
-            return itemLink
-        end
-    end
-    return nil
-end)
-
--- Hook ItemRefTooltip for chat link clicks
-HookTooltipSetMethod(ItemRefTooltip, "SetHyperlink", function(link)
-    if link and string.find(link, "^item:") then
-        local _, _, itemId = string.find(link, "item:(%d+)")
-        if itemId then
-            local name, itemLink = GetItemInfo(tonumber(itemId))
-            return itemLink
-        end
-    end
-    return nil
-end)
 
 -- Add upgrade data to tooltip
 local function AddUpgradeDataToTooltip(tooltip)
-    local itemLink = currentTooltipItemLink
+    local itemLink = ResolveTooltipItemLink(tooltip)
     if not itemLink then
         lastTooltipItem = nil
         return
@@ -497,12 +512,16 @@ local function HandleSlashCommand(msg)
 
     -- [DEBUG] Loot collector commands (remove before release)
     elseif msg == "lootdb" then
-        local count = GearSync_GetLootDBCount and GearSync_GetLootDBCount() or 0
-        Print("[DEBUG] --- Loot Database ---")
-        Print(string.format("Items collected: %d", count))
-        Print(string.format("DB version: %s", tostring(GearSyncLootDB.version or "N/A")))
-        if GearSyncLootDB.lastUpdated and GearSyncLootDB.lastUpdated > 0 then
-            Print(string.format("Last updated: %d seconds ago", time() - GearSyncLootDB.lastUpdated))
+        if not GearSyncLootDB then
+            PrintError("Loot database not initialized yet")
+        else
+            local count = GearSync_GetLootDBCount and GearSync_GetLootDBCount() or 0
+            Print("[DEBUG] --- Loot Database ---")
+            Print(string.format("Items collected: %d", count))
+            Print(string.format("DB version: %s", tostring(GearSyncLootDB.version or "N/A")))
+            if GearSyncLootDB.lastUpdated and GearSyncLootDB.lastUpdated > 0 then
+                Print(string.format("Last updated: %d seconds ago", time() - GearSyncLootDB.lastUpdated))
+            end
         end
 
     elseif string.find(msg, "^lootitem ") then
@@ -510,7 +529,7 @@ local function HandleSlashCommand(msg)
         local itemId = tonumber(idStr)
         if not itemId then
             PrintError("Usage: /gs lootitem <itemId>")
-        elseif not GearSyncLootDB.items or not GearSyncLootDB.items[itemId] then
+        elseif not GearSyncLootDB or not GearSyncLootDB.items or not GearSyncLootDB.items[itemId] then
             PrintError("Item #" .. itemId .. " not found in loot DB")
         else
             local item = GearSyncLootDB.items[itemId]
@@ -534,6 +553,29 @@ local function HandleSlashCommand(msg)
             Print("Sources: " .. sourceCount .. " entries")
         end
 
+    elseif msg == "lootlist" then
+        if not GearSyncLootDB or not GearSyncLootDB.items then
+            PrintError("Loot database not initialized")
+        else
+            Print("[DEBUG] --- All Collected Items ---")
+            local count = 0
+            for itemId, item in pairs(GearSyncLootDB.items) do
+                count = count + 1
+                local qualityColors = {
+                    [0] = "|cFF9D9D9D",  -- Poor (gray)
+                    [1] = "|cFFFFFFFF",  -- Common (white)
+                    [2] = "|cFF1EFF00",  -- Uncommon (green)
+                    [3] = "|cFF0070DD",  -- Rare (blue)
+                    [4] = "|cFFA335EE",  -- Epic (purple)
+                    [5] = "|cFFFF8000",  -- Legendary (orange)
+                }
+                local color = qualityColors[item.quality] or "|cFFFFFFFF"
+                local slot = item.equipSlot or item.armorType or "?"
+                Print(string.format("  %s[%d] %s|r - %s", color, itemId, item.name or "?", slot))
+            end
+            Print(string.format("Total: %d items", count))
+        end
+
     elseif msg == "lootclear" then
         GearSyncLootDB = { version = 1, lastUpdated = 0, items = {} }
         Print("[DEBUG] Loot database cleared")
@@ -544,7 +586,7 @@ local function HandleSlashCommand(msg)
 
     elseif msg == "loottest" then
         -- Parse tooltip of currently hovered item
-        local itemLink = currentTooltipItemLink
+        local itemLink = ResolveTooltipItemLink(GameTooltip)
         if not itemLink then
             PrintError("Hover over an item first")
         else
@@ -575,8 +617,23 @@ local function HandleSlashCommand(msg)
         end
     -- [/DEBUG]
 
+    elseif msg == "settings" or msg == "config" or msg == "ui" then
+        if GearSyncSettingsFrame then
+            if GearSyncSettingsFrame:IsVisible() then
+                GearSyncSettingsFrame:Hide()
+            else
+                GearSyncSettingsFrame:Show()
+                if GearSyncUI_UpdateStatus then
+                    GearSyncUI_UpdateStatus()
+                end
+            end
+        else
+            PrintError("UI not loaded yet")
+        end
+
     elseif msg == "help" or msg == "h" or msg == "?" then
         Print("--- Commands ---")
+        Print("/gs settings - Open settings panel")
         Print("/gs scan - Manually scan and save equipped gear")
         Print("/gs stats - Show addon statistics")
         Print("/gs upgrades - List items with upgrade data")
@@ -586,6 +643,7 @@ local function HandleSlashCommand(msg)
         -- [DEBUG] Loot commands (remove before release)
         Print("--- Debug (Loot Collector) ---")
         Print("/gs lootdb - Show loot database stats")
+        Print("/gs lootlist - List all collected items")
         Print("/gs lootitem <id> - Inspect item in loot DB")
         Print("/gs lootclear - Reset loot database")
         Print("/gs lootpending - Show retry queue size")

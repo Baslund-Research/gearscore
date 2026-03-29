@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xxd TooltipParser.lua)",
+      "Bash(xxd \"C:\\\\Games\\\\twmoa_1172\\\\Interface\\\\AddOns\\\\GearSync\\\\GearSync.toc\")"
+    ]
+  }
+}

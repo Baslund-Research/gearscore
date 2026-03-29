@@ -22,6 +22,15 @@ local MIN_QUALITY = 2         -- Minimum item quality (2 = Uncommon/Green)
 
 local pendingItems = {}  -- { [itemId] = { link=, sources={}, retries=0 } }
 local retryTimer = 0
+local lootCollectionEnabled = true
+
+function GearSync_SetLootEnabled(enabled)
+    lootCollectionEnabled = enabled
+end
+
+function GearSync_GetLootEnabled()
+    return lootCollectionEnabled
+end
 
 -- ============================================================================
 -- EVENT FRAME
@@ -114,6 +123,9 @@ local function ProcessItem(itemId, itemLink, sources)
         return false  -- Not cached, retry later
     end
 
+    -- [DEBUG] Log item type for troubleshooting (remove before release)
+    Print(string.format("[DEBUG] Item: %s | type: %s | subType: %s | quality: %s", tostring(name), tostring(itemType), tostring(itemSubType), tostring(quality)))
+
     -- Filter: only Armor and Weapon types
     if itemType ~= "Armor" and itemType ~= "Weapon" then
         return true  -- Not equipment, stop retrying but don't store
@@ -188,6 +200,7 @@ end
 
 -- Queue an item for processing
 local function QueueItem(itemLink, source)
+    if not lootCollectionEnabled then return end
     local itemId = ExtractItemId(itemLink)
     if not itemId then return end
 
@@ -380,21 +393,57 @@ local function OnEvent()
     if event == "PLAYER_ENTERING_WORLD" then
         InitDB()
 
+        -- Scan equipped gear into loot DB on login
+        local playerName = UnitName("player")
+        local zone = GetRealZoneText() or GetZoneText() or "Unknown"
+        for slotId = 1, 19 do
+            local itemLink = GetInventoryItemLink("player", slotId)
+            if itemLink then
+                QueueItem(itemLink, {
+                    type = "equipped",
+                    mob = nil,
+                    zone = zone,
+                    time = time(),
+                    looter = playerName,
+                })
+            end
+        end
+
+        -- Also scan bags
+        for bag = 0, 4 do
+            local numSlots = GetContainerNumSlots(bag)
+            if numSlots then
+                for slot = 1, numSlots do
+                    local itemLink = GetContainerItemLink(bag, slot)
+                    if itemLink then
+                        QueueItem(itemLink, {
+                            type = "bag",
+                            mob = nil,
+                            zone = zone,
+                            time = time(),
+                            looter = playerName,
+                        })
+                    end
+                end
+            end
+        end
+
         local count = 0
         for _ in pairs(GearSyncLootDB.items) do
             count = count + 1
         end
-        if count > 0 then
-            Print(string.format("Loot database loaded: %d items", count))
-        end
+        Print(string.format("Loot database: %d items (scanning equipped + bags)", count))
 
     elseif event == "LOOT_OPENED" then
+        Print("[DEBUG] LOOT_OPENED fired")
         OnLootOpened()
 
     elseif event == "CHAT_MSG_LOOT" then
+        Print("[DEBUG] CHAT_MSG_LOOT: " .. tostring(arg1))
         OnChatMsgLoot()
 
     elseif event == "CHAT_MSG_SYSTEM" then
+        Print("[DEBUG] CHAT_MSG_SYSTEM: " .. tostring(arg1))
         OnChatMsgSystem()
     end
 end

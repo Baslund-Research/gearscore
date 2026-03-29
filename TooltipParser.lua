@@ -3,9 +3,16 @@
 -- Parses item stats from a hidden tooltip frame (Vanilla 1.12 / Lua 5.0)
 -- ============================================================================
 
--- Create hidden tooltip for scanning items
-local scanTooltip = CreateFrame("GameTooltip", "GearSyncScanTooltip", UIParent, "GameTooltipTemplate")
-scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+-- Hidden tooltip created on first use (UIParent may not exist at load time)
+local scanTooltip = nil
+
+local function GetScanTooltip()
+    if not scanTooltip then
+        scanTooltip = CreateFrame("GameTooltip", "GearSyncScanTooltip", UIParent, "GameTooltipTemplate")
+        scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+    end
+    return scanTooltip
+end
 
 -- ============================================================================
 -- STAT MAPPING
@@ -253,9 +260,15 @@ end
 function GearSync_ParseItemTooltip(itemLink)
     if not itemLink then return nil end
 
+    -- Extract the "item:ID:X:X:X" portion from the full link
+    -- SetHyperlink expects just the hyperlink, not the full colored string
+    local _, _, hyperlink = string.find(itemLink, "|H(item:%d+:%d+:%d+:%d+)|h")
+    if not hyperlink then return nil end
+
     -- Clear and populate the hidden tooltip
-    scanTooltip:ClearLines()
-    scanTooltip:SetHyperlink(itemLink)
+    local tooltip = GetScanTooltip()
+    tooltip:ClearLines()
+    tooltip:SetHyperlink(hyperlink)
 
     -- Check if tooltip was populated (line 1 should have item name)
     local line1 = GetTooltipLine(1)
