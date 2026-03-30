@@ -160,6 +160,9 @@ local function SaveData(forceDebug)
         character = UnitName("player"),
         realm = GetRealmName(),
         class = UnitClass("player"),
+        race = UnitRace("player"),
+        level = UnitLevel("player"),
+        guild = GetGuildInfo("player"),
         equipment = equipment
     }
 
@@ -279,6 +282,11 @@ local function OnEvent()
         if not GearSyncSettings or GearSyncSettings.talentsEnabled ~= false then
             SaveData()
         end
+
+    elseif event == "PLAYER_LEAVING_WORLD" then
+        -- About to logout/reload — ensure latest data is saved
+        lastSaveTime = 0
+        SaveData()
     end
 end
 
@@ -286,6 +294,7 @@ frame:SetScript("OnEvent", OnEvent)
 
 -- Register events (Vanilla 1.12 compatible)
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+frame:RegisterEvent("PLAYER_LEAVING_WORLD")
 frame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 frame:RegisterEvent("CHARACTER_POINTS_CHANGED")
 
@@ -377,13 +386,29 @@ local function AddUpgradeDataToTooltip(tooltip)
     local itemId = tonumber(itemIdStr)
     if not itemId then return end
 
-    -- Prevent duplicate additions
+    -- Prevent duplicate additions (check if we already added our lines)
     if lastTooltipItem == itemId then return end
-    lastTooltipItem = itemId
 
     -- Check if we have upgrade data for this item
     local upgrade = GearSyncUpgrades[itemId]
-    if not upgrade then return end
+    if not upgrade then
+        lastTooltipItem = itemId  -- Still mark as checked to avoid re-scanning
+        return
+    end
+
+    lastTooltipItem = itemId
+
+    -- Skip if item is the same as equipped (overall +0% with no other stats)
+    if upgrade.overall == "+0%" then
+        local hasStats = false
+        for k, v in pairs(upgrade) do
+            if k ~= "overall" and k ~= "note" then
+                hasStats = true
+                break
+            end
+        end
+        if not hasStats then return end
+    end
 
     -- Add separator
     tooltip:AddLine(" ")
@@ -420,51 +445,32 @@ local function AddUpgradeDataToTooltip(tooltip)
     tooltip:Show()
 end
 
--- Hook GameTooltip using OnUpdate (Vanilla 1.12 compatible)
-local tooltipUpdateDelay = 0
-local oldGameTooltipOnUpdate = GameTooltip:GetScript("OnUpdate")
+-- Hook GameTooltip:Show() to inject upgrade data (Vanilla 1.12 compatible)
+local origGameTooltipShow = GameTooltip.Show
+GameTooltip.Show = function(self)
+    origGameTooltipShow(self)
+    AddUpgradeDataToTooltip(self)
+end
 
-GameTooltip:SetScript("OnUpdate", function()
-    -- Call original OnUpdate if it exists
-    if oldGameTooltipOnUpdate then
-        oldGameTooltipOnUpdate()
-    end
-
-    -- Throttle updates to every 0.1 seconds
-    tooltipUpdateDelay = tooltipUpdateDelay + arg1
-    if tooltipUpdateDelay > 0.1 then
-        tooltipUpdateDelay = 0
-
-        -- Check if tooltip is visible and has item data
-        if this:IsVisible() then
-            AddUpgradeDataToTooltip(this)
-        else
-            lastTooltipItem = nil
-            currentTooltipItemLink = nil
-        end
-    end
-end)
+-- Reset tracking when tooltip hides
+local origGameTooltipHide = GameTooltip.Hide
+GameTooltip.Hide = function(self)
+    lastTooltipItem = nil
+    origGameTooltipHide(self)
+end
 
 -- Also hook ItemRefTooltip (for chat links)
-local itemRefUpdateDelay = 0
-local oldItemRefTooltipOnUpdate = ItemRefTooltip:GetScript("OnUpdate")
+local origItemRefShow = ItemRefTooltip.Show
+ItemRefTooltip.Show = function(self)
+    origItemRefShow(self)
+    AddUpgradeDataToTooltip(self)
+end
 
-ItemRefTooltip:SetScript("OnUpdate", function()
-    if oldItemRefTooltipOnUpdate then
-        oldItemRefTooltipOnUpdate()
-    end
-
-    itemRefUpdateDelay = itemRefUpdateDelay + arg1
-    if itemRefUpdateDelay > 0.1 then
-        itemRefUpdateDelay = 0
-
-        if this:IsVisible() then
-            AddUpgradeDataToTooltip(this)
-        else
-            lastTooltipItem = nil
-        end
-    end
-end)
+local origItemRefHide = ItemRefTooltip.Hide
+ItemRefTooltip.Hide = function(self)
+    lastTooltipItem = nil
+    origItemRefHide(self)
+end
 
 -- ============================================================================
 -- SLASH COMMANDS

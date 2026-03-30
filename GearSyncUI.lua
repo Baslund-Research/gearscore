@@ -137,7 +137,7 @@ end)
 
 local settingsFrame = CreateFrame("Frame", "GearSyncSettingsFrame", UIParent)
 settingsFrame:SetWidth(280)
-settingsFrame:SetHeight(368)
+settingsFrame:SetHeight(396)
 settingsFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 settingsFrame:SetFrameStrata("DIALOG")
 settingsFrame:SetMovable(true)
@@ -274,11 +274,25 @@ lootListBtn:SetScript("OnClick", function()
     end
 end)
 
+-- Show Upgrades button
+local upgradeListBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelButtonTemplate")
+upgradeListBtn:SetWidth(240)
+upgradeListBtn:SetHeight(22)
+upgradeListBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -196)
+upgradeListBtn:SetText("Show Upgrades")
+upgradeListBtn:SetScript("OnClick", function()
+    if GearSyncUpgradeListFrame:IsVisible() then
+        GearSyncUpgradeListFrame:Hide()
+    else
+        GearSyncUI_ShowUpgradeList()
+    end
+end)
+
 -- Loot DB Stats button
 local lootStatsBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelButtonTemplate")
 lootStatsBtn:SetWidth(240)
 lootStatsBtn:SetHeight(22)
-lootStatsBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -196)
+lootStatsBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -224)
 lootStatsBtn:SetText("Loot DB Stats")
 lootStatsBtn:SetScript("OnClick", function()
     if GearSync_ShowLootDBStats then
@@ -290,7 +304,7 @@ end)
 local clearBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelButtonTemplate")
 clearBtn:SetWidth(240)
 clearBtn:SetHeight(22)
-clearBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -224)
+clearBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -252)
 clearBtn:SetText("Clear Loot DB (Shift+Click)")
 clearBtn:SetScript("OnClick", function()
     if IsShiftKeyDown() then
@@ -301,6 +315,213 @@ clearBtn:SetScript("OnClick", function()
         DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000[GearSync]|r Hold Shift and click to clear the loot database")
     end
 end)
+
+-- ============================================================================
+-- UPGRADE LIST WINDOW
+-- ============================================================================
+
+local UPGRADE_ROW_HEIGHT = 16
+local UPGRADE_VISIBLE_ROWS = 20
+local upgradeListOffset = 0
+local upgradeListItems = {}
+
+local upgradeListFrame = CreateFrame("Frame", "GearSyncUpgradeListFrame", UIParent)
+upgradeListFrame:SetWidth(460)
+upgradeListFrame:SetHeight(400)
+upgradeListFrame:SetPoint("CENTER", UIParent, "CENTER", -200, 0)
+upgradeListFrame:SetFrameStrata("DIALOG")
+upgradeListFrame:SetMovable(true)
+upgradeListFrame:EnableMouse(true)
+upgradeListFrame:RegisterForDrag("LeftButton")
+upgradeListFrame:SetScript("OnDragStart", function() this:StartMoving() end)
+upgradeListFrame:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
+upgradeListFrame:Hide()
+
+upgradeListFrame:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true, tileSize = 16, edgeSize = 16,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 },
+})
+upgradeListFrame:SetBackdropColor(0, 0, 0, 0.95)
+
+if UISpecialFrames then
+    table.insert(UISpecialFrames, "GearSyncUpgradeListFrame")
+end
+
+local ulTitle = upgradeListFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+ulTitle:SetPoint("TOP", upgradeListFrame, "TOP", 0, -10)
+ulTitle:SetText("|cFF00BFFF⚔ TurtleLootLine - Upgrade Recommendations|r")
+
+local ulCloseBtn = CreateFrame("Button", nil, upgradeListFrame, "UIPanelCloseButton")
+ulCloseBtn:SetPoint("TOPRIGHT", upgradeListFrame, "TOPRIGHT", -2, -2)
+
+local ulCountText = upgradeListFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+ulCountText:SetPoint("TOPLEFT", upgradeListFrame, "TOPLEFT", 12, -28)
+
+-- Column headers
+local ulHeaderSlot = upgradeListFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+ulHeaderSlot:SetPoint("TOPLEFT", upgradeListFrame, "TOPLEFT", 12, -44)
+ulHeaderSlot:SetText("|cFFFFD700Slot|r")
+
+local ulHeaderName = upgradeListFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+ulHeaderName:SetPoint("TOPLEFT", upgradeListFrame, "TOPLEFT", 80, -44)
+ulHeaderName:SetText("|cFFFFD700Item Name|r")
+
+local ulHeaderUpgrade = upgradeListFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+ulHeaderUpgrade:SetPoint("TOPRIGHT", upgradeListFrame, "TOPRIGHT", -28, -44)
+ulHeaderUpgrade:SetText("|cFFFFD700Upgrade|r")
+
+local ulSeparator = upgradeListFrame:CreateTexture(nil, "ARTWORK")
+ulSeparator:SetTexture(1, 1, 1, 0.3)
+ulSeparator:SetHeight(1)
+ulSeparator:SetPoint("TOPLEFT", upgradeListFrame, "TOPLEFT", 8, -55)
+ulSeparator:SetPoint("TOPRIGHT", upgradeListFrame, "TOPRIGHT", -24, -55)
+
+-- Create row frames
+local upgradeListRows = {}
+for i = 1, UPGRADE_VISIBLE_ROWS do
+    local row = CreateFrame("Button", nil, upgradeListFrame)
+    row:SetWidth(416)
+    row:SetHeight(UPGRADE_ROW_HEIGHT)
+    row:SetPoint("TOPLEFT", upgradeListFrame, "TOPLEFT", 10, -56 - ((i - 1) * UPGRADE_ROW_HEIGHT))
+
+    local highlight = row:CreateTexture(nil, "HIGHLIGHT")
+    highlight:SetTexture(1, 1, 1, 0.1)
+    highlight:SetAllPoints(row)
+
+    local slotText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    slotText:SetPoint("LEFT", row, "LEFT", 2, 0)
+    slotText:SetWidth(65)
+    slotText:SetJustifyH("LEFT")
+
+    local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    nameText:SetPoint("LEFT", row, "LEFT", 70, 0)
+    nameText:SetWidth(280)
+    nameText:SetJustifyH("LEFT")
+
+    local upgradeText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    upgradeText:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+    upgradeText:SetWidth(70)
+    upgradeText:SetJustifyH("RIGHT")
+
+    row.slotText = slotText
+    row.nameText = nameText
+    row.upgradeText = upgradeText
+
+    -- Tooltip on hover: show item name from GetItemInfo if possible
+    row:SetScript("OnEnter", function()
+        if this.itemId then
+            GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+            local itemName = GetItemInfo(this.itemId)
+            if itemName then
+                -- SetHyperlink with just the item ID
+                GameTooltip:SetHyperlink("item:" .. this.itemId .. ":0:0:0")
+            else
+                GameTooltip:AddLine("Item #" .. this.itemId)
+                GameTooltip:AddLine(this.noteTxt or "", 1, 1, 1)
+            end
+            GameTooltip:Show()
+        end
+    end)
+
+    row:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    upgradeListRows[i] = row
+end
+
+-- Scrollbar
+local ulScrollBar = CreateFrame("Slider", "GearSyncUpgradeListScrollBar", upgradeListFrame, "UIPanelScrollBarTemplate")
+upgradeListFrame.SetVerticalScroll = function() end
+ulScrollBar:SetPoint("TOPRIGHT", upgradeListFrame, "TOPRIGHT", -8, -72)
+ulScrollBar:SetPoint("BOTTOMRIGHT", upgradeListFrame, "BOTTOMRIGHT", -8, 16)
+ulScrollBar:SetWidth(16)
+ulScrollBar:SetMinMaxValues(0, 1)
+ulScrollBar:SetValueStep(1)
+ulScrollBar:SetValue(0)
+
+ulScrollBar:SetScript("OnValueChanged", function()
+    upgradeListOffset = math.floor(this:GetValue())
+    GearSyncUI_UpdateUpgradeList()
+end)
+
+upgradeListFrame:EnableMouseWheel(true)
+upgradeListFrame:SetScript("OnMouseWheel", function()
+    local newOffset = upgradeListOffset - arg1 * 3
+    if newOffset < 0 then newOffset = 0 end
+    local maxOffset = table.getn(upgradeListItems) - UPGRADE_VISIBLE_ROWS
+    if maxOffset < 0 then maxOffset = 0 end
+    if newOffset > maxOffset then newOffset = maxOffset end
+    upgradeListOffset = newOffset
+    ulScrollBar:SetValue(newOffset)
+    GearSyncUI_UpdateUpgradeList()
+end)
+
+function GearSyncUI_UpdateUpgradeList()
+    for i = 1, UPGRADE_VISIBLE_ROWS do
+        local row = upgradeListRows[i]
+        local dataIdx = upgradeListOffset + i
+        local item = upgradeListItems[dataIdx]
+
+        if item then
+            row.slotText:SetText("|cFFAAAAAA" .. (item.slot or "") .. "|r")
+            row.nameText:SetText(item.displayName or ("Item #" .. item.itemId))
+            row.upgradeText:SetText("|cFF00FF00" .. (item.overall or "") .. "|r")
+            row.itemId = item.itemId
+            row.noteTxt = item.note
+            row:Show()
+        else
+            row.slotText:SetText("")
+            row.nameText:SetText("")
+            row.upgradeText:SetText("")
+            row.itemId = nil
+            row:Hide()
+        end
+    end
+end
+
+function GearSyncUI_RefreshUpgradeList()
+    upgradeListItems = {}
+    if not GearSyncUpgrades then return end
+
+    for itemId, data in pairs(GearSyncUpgrades) do
+        local numId = tonumber(itemId)
+        if numId and data.overall and data.overall ~= "+0%" then
+            local itemName = GetItemInfo(numId)
+            table.insert(upgradeListItems, {
+                itemId = numId,
+                displayName = itemName and ("|cFF1EFF00" .. itemName .. "|r") or ("|cFFAAAAAA Item #" .. numId .. "|r"),
+                overall = data.overall,
+                note = data.note,
+                slot = data.note and string.gsub(data.note, " upgrade.*", "") or "",
+                -- For sorting: extract percentage number
+                pct = tonumber(string.match(data.overall, "([%d%.]+)")) or 0,
+            })
+        end
+    end
+
+    -- Sort by upgrade percentage descending
+    table.sort(upgradeListItems, function(a, b)
+        return a.pct > b.pct
+    end)
+
+    ulCountText:SetText("Upgrades: " .. table.getn(upgradeListItems) .. " items")
+
+    local maxOffset = table.getn(upgradeListItems) - UPGRADE_VISIBLE_ROWS
+    if maxOffset < 0 then maxOffset = 0 end
+    ulScrollBar:SetMinMaxValues(0, maxOffset)
+
+    upgradeListOffset = 0
+    ulScrollBar:SetValue(0)
+    GearSyncUI_UpdateUpgradeList()
+end
+
+function GearSyncUI_ShowUpgradeList()
+    GearSyncUI_RefreshUpgradeList()
+    upgradeListFrame:Show()
+end
 
 -- ============================================================================
 -- LOOT LIST WINDOW
@@ -531,23 +752,23 @@ end
 -- ============================================================================
 
 local statusLabel = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-statusLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -258)
+statusLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -286)
 statusLabel:SetText("Status")
 
 local itemsText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-itemsText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -278)
+itemsText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -306)
 itemsText:SetText("Items collected: 0")
 
 local upgradesText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-upgradesText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -296)
+upgradesText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -324)
 upgradesText:SetText("Upgrades loaded: 0")
 
 local lootStatusText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-lootStatusText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -314)
+lootStatusText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -342)
 lootStatusText:SetText("Loot collection: ON")
 
 local pendingText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-pendingText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -332)
+pendingText:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -360)
 pendingText:SetText("Pending items: 0")
 
 -- ============================================================================

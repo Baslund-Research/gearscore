@@ -103,7 +103,9 @@ local EQUIP_PATTERNS = {
     { "chance to parry an attack by (%d+)%%", "parryChance" },
     { "chance to block attacks with a shield by (%d+)%%", "blockChance" },
     { "Increases your attack power by (%d+)", "attackPower" },
+    { "%+(%d+) Attack Power", "attackPower" },
     { "ranged attack power by (%d+)", "rangedAttackPower" },
+    { "%+(%d+) Ranged Attack Power", "rangedAttackPower" },
 }
 
 -- ============================================================================
@@ -141,6 +143,12 @@ local function ParseLine(line, result)
         return
     elseif line == "Binds when used" then
         result.bindType = "use"
+        return
+    end
+
+    -- Unique
+    if line == "Unique" or line == "Unique-Equipped" then
+        result.unique = true
         return
     end
 
@@ -238,15 +246,20 @@ local function ParseLine(line, result)
         return
     end
 
-    -- Armor type
-    if ARMOR_TYPES[line] then
-        result.armorType = line
-        return
+    -- Armor type (only for actual armor slots, not weapons/accessories/relics)
+    if ARMOR_TYPES[line] and not result.weaponType then
+        local slot = result.equipSlot
+        if slot ~= "Neck" and slot ~= "Finger" and slot ~= "Trinket" and slot ~= "Relic" and slot ~= "HeldInOffhand" then
+            result.armorType = line
+            return
+        end
     end
 
-    -- Weapon type
+    -- Weapon type (only if we haven't already found an armor type)
     if WEAPON_TYPES[line] then
         result.weaponType = line
+        -- Clear armorType if it was set (weapon tooltip may have had a misleading line earlier)
+        result.armorType = nil
         return
     end
 end
@@ -279,6 +292,7 @@ function GearSync_ParseItemTooltip(itemLink)
     local result = {
         name = line1,
         bindType = nil,
+        unique = nil,
         equipSlot = nil,
         armorType = nil,
         weaponType = nil,

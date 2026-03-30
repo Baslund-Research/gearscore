@@ -279,6 +279,7 @@ local function OnLootOpened()
                 zone = zone,
                 time = time(),
                 looter = playerName,
+                guild = GetGuildInfo("player"),
             })
         end
     end
@@ -309,6 +310,7 @@ local function OnChatMsgLoot()
         zone = zone,
         time = time(),
         looter = looterName,
+        guild = GetGuildInfo("player"),
     })
 end
 
