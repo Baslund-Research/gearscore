@@ -87,11 +87,11 @@ local function ScanEquipment()
                 itemName = GetItemInfo(itemLink)
             end
 
-            if itemId and itemName then
+            if itemId then
                 equipment[slotId] = {
                     slot = SLOT_NAMES[slotId],
                     itemId = itemId,
-                    itemName = itemName,
+                    itemName = itemName or ("Item #" .. itemId),
                     itemLink = itemLink
                 }
             end
