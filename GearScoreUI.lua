@@ -13,7 +13,7 @@ local DEFAULTS = {
     minimapPos = 220,
     lootEnabled = true,
     talentsEnabled = true,
-    debugLog = true,
+    debugLog = false,
 }
 
 local function ApplyDefaults()
