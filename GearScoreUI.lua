@@ -1,9 +1,9 @@
 -- ============================================================================
--- GearSyncUI - Minimap Button & Settings Panel
+-- GearScoreUI - Minimap Button & Settings Panel
 -- Vanilla 1.12 / Lua 5.0 compatible
 -- ============================================================================
 
-GearSyncSettings = GearSyncSettings or {}
+GearScoreSettings = GearScoreSettings or {}
 
 -- ============================================================================
 -- DEFAULTS
@@ -17,17 +17,17 @@ local DEFAULTS = {
 }
 
 local function ApplyDefaults()
-    if GearSyncSettings.minimapPos == nil then
-        GearSyncSettings.minimapPos = DEFAULTS.minimapPos
+    if GearScoreSettings.minimapPos == nil then
+        GearScoreSettings.minimapPos = DEFAULTS.minimapPos
     end
-    if GearSyncSettings.lootEnabled == nil then
-        GearSyncSettings.lootEnabled = DEFAULTS.lootEnabled
+    if GearScoreSettings.lootEnabled == nil then
+        GearScoreSettings.lootEnabled = DEFAULTS.lootEnabled
     end
-    if GearSyncSettings.debugLog == nil then
-        GearSyncSettings.debugLog = DEFAULTS.debugLog
+    if GearScoreSettings.debugLog == nil then
+        GearScoreSettings.debugLog = DEFAULTS.debugLog
     end
-    if GearSyncSettings.talentsEnabled == nil then
-        GearSyncSettings.talentsEnabled = DEFAULTS.talentsEnabled
+    if GearScoreSettings.talentsEnabled == nil then
+        GearScoreSettings.talentsEnabled = DEFAULTS.talentsEnabled
     end
 end
 
@@ -35,7 +35,7 @@ end
 -- MINIMAP BUTTON
 -- ============================================================================
 
-local minimapButton = CreateFrame("Button", "GearSyncMinimapButton", Minimap)
+local minimapButton = CreateFrame("Button", "GearScoreMinimapButton", Minimap)
 minimapButton:SetWidth(33)
 minimapButton:SetHeight(33)
 minimapButton:SetFrameStrata("MEDIUM")
@@ -58,7 +58,7 @@ border:SetPoint("TOPLEFT", 0, 0)
 
 -- Position the button around the minimap
 local function UpdateMinimapPosition()
-    local angle = GearSyncSettings.minimapPos or 220
+    local angle = GearScoreSettings.minimapPos or 220
     local radius = 80
     minimapButton:ClearAllPoints()
     minimapButton:SetPoint(
@@ -90,37 +90,37 @@ minimapButton:SetScript("OnUpdate", function()
     ypos = ypos / scale - ymin - 70
     local angle = math.deg(math.atan2(ypos, xpos))
     if angle < 0 then angle = angle + 360 end
-    GearSyncSettings.minimapPos = angle
+    GearScoreSettings.minimapPos = angle
     UpdateMinimapPosition()
 end)
 
 -- Click handler
 minimapButton:SetScript("OnClick", function()
     if arg1 == "LeftButton" then
-        if GearSyncSettingsFrame:IsVisible() then
-            GearSyncSettingsFrame:Hide()
+        if GearScoreSettingsFrame:IsVisible() then
+            GearScoreSettingsFrame:Hide()
         else
-            GearSyncSettingsFrame:Show()
-            GearSyncUI_UpdateStatus()
+            GearScoreSettingsFrame:Show()
+            GearScoreUI_UpdateStatus()
         end
     elseif arg1 == "RightButton" then
         -- Quick status
-        local lootCount = GearSync_GetLootDBCount and GearSync_GetLootDBCount() or 0
+        local lootCount = GearScore_GetLootDBCount and GearScore_GetLootDBCount() or 0
         local upgradeCount = 0
-        if GearSyncUpgrades then
-            for _ in pairs(GearSyncUpgrades) do
+        if GearScoreUpgrades then
+            for _ in pairs(GearScoreUpgrades) do
                 upgradeCount = upgradeCount + 1
             end
         end
-        local enabled = GearSyncSettings.lootEnabled and "|cFF00FF00ON|r" or "|cFFFF0000OFF|r"
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Loot: " .. enabled .. " | Items: " .. lootCount .. " | Upgrades: " .. upgradeCount)
+        local enabled = GearScoreSettings.lootEnabled and "|cFF00FF00ON|r" or "|cFFFF0000OFF|r"
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearScore]|r Loot: " .. enabled .. " | Items: " .. lootCount .. " | Upgrades: " .. upgradeCount)
     end
 end)
 
 -- Tooltip
 minimapButton:SetScript("OnEnter", function()
     GameTooltip:SetOwner(this, "ANCHOR_LEFT")
-    GameTooltip:AddLine("|cFF00FF00GearSync|r")
+    GameTooltip:AddLine("|cFF00FF00GearScore|r")
     GameTooltip:AddLine("Left-click: Open settings", 1, 1, 1)
     GameTooltip:AddLine("Right-click: Quick status", 1, 1, 1)
     GameTooltip:AddLine("Drag: Move button", 0.7, 0.7, 0.7)
@@ -135,7 +135,7 @@ end)
 -- SETTINGS PANEL
 -- ============================================================================
 
-local settingsFrame = CreateFrame("Frame", "GearSyncSettingsFrame", UIParent)
+local settingsFrame = CreateFrame("Frame", "GearScoreSettingsFrame", UIParent)
 settingsFrame:SetWidth(280)
 settingsFrame:SetHeight(396)
 settingsFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -158,13 +158,13 @@ settingsFrame:SetBackdropColor(0, 0, 0, 0.9)
 
 -- Make closable with Escape
 if UISpecialFrames then
-    table.insert(UISpecialFrames, "GearSyncSettingsFrame")
+    table.insert(UISpecialFrames, "GearScoreSettingsFrame")
 end
 
 -- Title
 local title = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 title:SetPoint("TOP", settingsFrame, "TOP", 0, -12)
-title:SetText("|cFF00FF00GearSync Settings|r")
+title:SetText("|cFF00FF00GearScore Settings|r")
 
 -- Close button
 local closeBtn = CreateFrame("Button", nil, settingsFrame, "UIPanelCloseButton")
@@ -174,24 +174,24 @@ closeBtn:SetPoint("TOPRIGHT", settingsFrame, "TOPRIGHT", -2, -2)
 -- LOOT TOGGLE
 -- ============================================================================
 
-local lootToggle = CreateFrame("CheckButton", "GearSyncLootToggle", settingsFrame, "OptionsCheckButtonTemplate")
+local lootToggle = CreateFrame("CheckButton", "GearScoreLootToggle", settingsFrame, "OptionsCheckButtonTemplate")
 lootToggle:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -42)
 
-local lootToggleText = getglobal("GearSyncLootToggleText")
+local lootToggleText = getglobal("GearScoreLootToggleText")
 if lootToggleText then
     lootToggleText:SetText("Enable loot collection")
 end
 
 lootToggle:SetScript("OnClick", function()
     local checked = (this:GetChecked() == 1)
-    GearSyncSettings.lootEnabled = checked
-    if GearSync_SetLootEnabled then
-        GearSync_SetLootEnabled(checked)
+    GearScoreSettings.lootEnabled = checked
+    if GearScore_SetLootEnabled then
+        GearScore_SetLootEnabled(checked)
     end
     if checked then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Loot collection |cFF00FF00enabled|r")
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearScore]|r Loot collection |cFF00FF00enabled|r")
     else
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Loot collection |cFFFF0000disabled|r")
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearScore]|r Loot collection |cFFFF0000disabled|r")
     end
 end)
 
@@ -199,21 +199,21 @@ end)
 -- TALENT SYNC TOGGLE
 -- ============================================================================
 
-local talentToggle = CreateFrame("CheckButton", "GearSyncTalentToggle", settingsFrame, "OptionsCheckButtonTemplate")
+local talentToggle = CreateFrame("CheckButton", "GearScoreTalentToggle", settingsFrame, "OptionsCheckButtonTemplate")
 talentToggle:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -66)
 
-local talentToggleText = getglobal("GearSyncTalentToggleText")
+local talentToggleText = getglobal("GearScoreTalentToggleText")
 if talentToggleText then
     talentToggleText:SetText("Enable talent sync")
 end
 
 talentToggle:SetScript("OnClick", function()
     local checked = (this:GetChecked() == 1)
-    GearSyncSettings.talentsEnabled = checked
+    GearScoreSettings.talentsEnabled = checked
     if checked then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Talent sync |cFF00FF00enabled|r")
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearScore]|r Talent sync |cFF00FF00enabled|r")
     else
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Talent sync |cFFFF0000disabled|r")
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearScore]|r Talent sync |cFFFF0000disabled|r")
     end
 end)
 
@@ -221,21 +221,21 @@ end)
 -- DEBUG LOG TOGGLE
 -- ============================================================================
 
-local debugToggle = CreateFrame("CheckButton", "GearSyncDebugToggle", settingsFrame, "OptionsCheckButtonTemplate")
+local debugToggle = CreateFrame("CheckButton", "GearScoreDebugToggle", settingsFrame, "OptionsCheckButtonTemplate")
 debugToggle:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 16, -90)
 
-local debugToggleText = getglobal("GearSyncDebugToggleText")
+local debugToggleText = getglobal("GearScoreDebugToggleText")
 if debugToggleText then
     debugToggleText:SetText("Show chat log messages")
 end
 
 debugToggle:SetScript("OnClick", function()
     local checked = (this:GetChecked() == 1)
-    GearSyncSettings.debugLog = checked
+    GearScoreSettings.debugLog = checked
     if checked then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Chat log |cFF00FF00enabled|r")
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearScore]|r Chat log |cFF00FF00enabled|r")
     else
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Chat log |cFFFF0000disabled|r")
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearScore]|r Chat log |cFFFF0000disabled|r")
     end
 end)
 
@@ -254,10 +254,10 @@ scanBtn:SetHeight(22)
 scanBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -140)
 scanBtn:SetText("Scan Gear")
 scanBtn:SetScript("OnClick", function()
-    if GearSync_ManualScan then
-        GearSync_ManualScan()
+    if GearScore_ManualScan then
+        GearScore_ManualScan()
     end
-    GearSyncUI_UpdateStatus()
+    GearScoreUI_UpdateStatus()
 end)
 
 -- Show Loot List button
@@ -267,10 +267,10 @@ lootListBtn:SetHeight(22)
 lootListBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -168)
 lootListBtn:SetText("Show Loot List")
 lootListBtn:SetScript("OnClick", function()
-    if GearSyncLootListFrame:IsVisible() then
-        GearSyncLootListFrame:Hide()
+    if GearScoreLootListFrame:IsVisible() then
+        GearScoreLootListFrame:Hide()
     else
-        GearSyncUI_ShowLootList()
+        GearScoreUI_ShowLootList()
     end
 end)
 
@@ -281,10 +281,10 @@ upgradeListBtn:SetHeight(22)
 upgradeListBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -196)
 upgradeListBtn:SetText("Show Upgrades")
 upgradeListBtn:SetScript("OnClick", function()
-    if GearSyncUpgradeListFrame:IsVisible() then
-        GearSyncUpgradeListFrame:Hide()
+    if GearScoreUpgradeListFrame:IsVisible() then
+        GearScoreUpgradeListFrame:Hide()
     else
-        GearSyncUI_ShowUpgradeList()
+        GearScoreUI_ShowUpgradeList()
     end
 end)
 
@@ -295,8 +295,8 @@ lootStatsBtn:SetHeight(22)
 lootStatsBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -224)
 lootStatsBtn:SetText("Loot DB Stats")
 lootStatsBtn:SetScript("OnClick", function()
-    if GearSync_ShowLootDBStats then
-        GearSync_ShowLootDBStats()
+    if GearScore_ShowLootDBStats then
+        GearScore_ShowLootDBStats()
     end
 end)
 
@@ -308,11 +308,11 @@ clearBtn:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -252)
 clearBtn:SetText("Clear Loot DB (Shift+Click)")
 clearBtn:SetScript("OnClick", function()
     if IsShiftKeyDown() then
-        GearSyncLootDB = { version = 1, lastUpdated = 0, items = {} }
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync]|r Loot database cleared")
-        GearSyncUI_UpdateStatus()
+        GearScoreLootDB = { version = 1, lastUpdated = 0, items = {} }
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearScore]|r Loot database cleared")
+        GearScoreUI_UpdateStatus()
     else
-        DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000[GearSync]|r Hold Shift and click to clear the loot database")
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000[GearScore]|r Hold Shift and click to clear the loot database")
     end
 end)
 
@@ -325,7 +325,7 @@ local UPGRADE_VISIBLE_ROWS = 20
 local upgradeListOffset = 0
 local upgradeListItems = {}
 
-local upgradeListFrame = CreateFrame("Frame", "GearSyncUpgradeListFrame", UIParent)
+local upgradeListFrame = CreateFrame("Frame", "GearScoreUpgradeListFrame", UIParent)
 upgradeListFrame:SetWidth(460)
 upgradeListFrame:SetHeight(400)
 upgradeListFrame:SetPoint("CENTER", UIParent, "CENTER", -200, 0)
@@ -346,7 +346,7 @@ upgradeListFrame:SetBackdrop({
 upgradeListFrame:SetBackdropColor(0, 0, 0, 0.95)
 
 if UISpecialFrames then
-    table.insert(UISpecialFrames, "GearSyncUpgradeListFrame")
+    table.insert(UISpecialFrames, "GearScoreUpgradeListFrame")
 end
 
 local ulTitle = upgradeListFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -433,7 +433,7 @@ for i = 1, UPGRADE_VISIBLE_ROWS do
 end
 
 -- Scrollbar
-local ulScrollBar = CreateFrame("Slider", "GearSyncUpgradeListScrollBar", upgradeListFrame, "UIPanelScrollBarTemplate")
+local ulScrollBar = CreateFrame("Slider", "GearScoreUpgradeListScrollBar", upgradeListFrame, "UIPanelScrollBarTemplate")
 upgradeListFrame.SetVerticalScroll = function() end
 ulScrollBar:SetPoint("TOPRIGHT", upgradeListFrame, "TOPRIGHT", -8, -72)
 ulScrollBar:SetPoint("BOTTOMRIGHT", upgradeListFrame, "BOTTOMRIGHT", -8, 16)
@@ -444,7 +444,7 @@ ulScrollBar:SetValue(0)
 
 ulScrollBar:SetScript("OnValueChanged", function()
     upgradeListOffset = math.floor(this:GetValue())
-    GearSyncUI_UpdateUpgradeList()
+    GearScoreUI_UpdateUpgradeList()
 end)
 
 upgradeListFrame:EnableMouseWheel(true)
@@ -456,10 +456,10 @@ upgradeListFrame:SetScript("OnMouseWheel", function()
     if newOffset > maxOffset then newOffset = maxOffset end
     upgradeListOffset = newOffset
     ulScrollBar:SetValue(newOffset)
-    GearSyncUI_UpdateUpgradeList()
+    GearScoreUI_UpdateUpgradeList()
 end)
 
-function GearSyncUI_UpdateUpgradeList()
+function GearScoreUI_UpdateUpgradeList()
     for i = 1, UPGRADE_VISIBLE_ROWS do
         local row = upgradeListRows[i]
         local dataIdx = upgradeListOffset + i
@@ -482,11 +482,11 @@ function GearSyncUI_UpdateUpgradeList()
     end
 end
 
-function GearSyncUI_RefreshUpgradeList()
+function GearScoreUI_RefreshUpgradeList()
     upgradeListItems = {}
-    if not GearSyncUpgrades then return end
+    if not GearScoreUpgrades then return end
 
-    for itemId, data in pairs(GearSyncUpgrades) do
+    for itemId, data in pairs(GearScoreUpgrades) do
         local numId = tonumber(itemId)
         if numId and data.overall and data.overall ~= "+0%" then
             local itemName = GetItemInfo(numId)
@@ -515,11 +515,11 @@ function GearSyncUI_RefreshUpgradeList()
 
     upgradeListOffset = 0
     ulScrollBar:SetValue(0)
-    GearSyncUI_UpdateUpgradeList()
+    GearScoreUI_UpdateUpgradeList()
 end
 
-function GearSyncUI_ShowUpgradeList()
-    GearSyncUI_RefreshUpgradeList()
+function GearScoreUI_ShowUpgradeList()
+    GearScoreUI_RefreshUpgradeList()
     upgradeListFrame:Show()
 end
 
@@ -532,7 +532,7 @@ local LOOT_LIST_VISIBLE_ROWS = 20
 local lootListOffset = 0
 local lootListItems = {}  -- sorted list of { itemId, name, quality, slot }
 
-local lootListFrame = CreateFrame("Frame", "GearSyncLootListFrame", UIParent)
+local lootListFrame = CreateFrame("Frame", "GearScoreLootListFrame", UIParent)
 lootListFrame:SetWidth(420)
 lootListFrame:SetHeight(380)
 lootListFrame:SetPoint("CENTER", UIParent, "CENTER", 200, 0)
@@ -553,13 +553,13 @@ lootListFrame:SetBackdrop({
 lootListFrame:SetBackdropColor(0, 0, 0, 0.95)
 
 if UISpecialFrames then
-    table.insert(UISpecialFrames, "GearSyncLootListFrame")
+    table.insert(UISpecialFrames, "GearScoreLootListFrame")
 end
 
 -- Title
 local llTitle = lootListFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 llTitle:SetPoint("TOP", lootListFrame, "TOP", 0, -10)
-llTitle:SetText("|cFF00FF00GearSync - Collected Items|r")
+llTitle:SetText("|cFF00FF00GearScore - Collected Items|r")
 
 -- Close button
 local llCloseBtn = CreateFrame("Button", nil, lootListFrame, "UIPanelCloseButton")
@@ -642,7 +642,7 @@ for i = 1, LOOT_LIST_VISIBLE_ROWS do
 end
 
 -- Scrollbar
-local scrollBar = CreateFrame("Slider", "GearSyncLootListScrollBar", lootListFrame, "UIPanelScrollBarTemplate")
+local scrollBar = CreateFrame("Slider", "GearScoreLootListScrollBar", lootListFrame, "UIPanelScrollBarTemplate")
 -- UIPanelScrollBarTemplate's OnValueChanged calls parent:SetVerticalScroll() which
 -- doesn't exist on a plain Frame. Provide a no-op so it doesn't error.
 lootListFrame.SetVerticalScroll = function() end
@@ -655,7 +655,7 @@ scrollBar:SetValue(0)
 
 scrollBar:SetScript("OnValueChanged", function()
     lootListOffset = math.floor(this:GetValue())
-    GearSyncUI_UpdateLootList()
+    GearScoreUI_UpdateLootList()
 end)
 
 -- Mouse wheel scrolling
@@ -668,7 +668,7 @@ lootListFrame:SetScript("OnMouseWheel", function()
     if newOffset > maxOffset then newOffset = maxOffset end
     lootListOffset = newOffset
     scrollBar:SetValue(newOffset)
-    GearSyncUI_UpdateLootList()
+    GearScoreUI_UpdateLootList()
 end)
 
 -- Quality color lookup
@@ -682,7 +682,7 @@ local QUALITY_COLORS = {
 }
 
 -- Update visible rows from data
-function GearSyncUI_UpdateLootList()
+function GearScoreUI_UpdateLootList()
     for i = 1, LOOT_LIST_VISIBLE_ROWS do
         local row = lootListRows[i]
         local dataIdx = lootListOffset + i
@@ -706,11 +706,11 @@ function GearSyncUI_UpdateLootList()
 end
 
 -- Rebuild the sorted item list and refresh display
-function GearSyncUI_RefreshLootList()
+function GearScoreUI_RefreshLootList()
     lootListItems = {}
-    if not GearSyncLootDB or not GearSyncLootDB.items then return end
+    if not GearScoreLootDB or not GearScoreLootDB.items then return end
 
-    for itemId, item in pairs(GearSyncLootDB.items) do
+    for itemId, item in pairs(GearScoreLootDB.items) do
         table.insert(lootListItems, {
             itemId = itemId,
             name = item.name,
@@ -738,12 +738,12 @@ function GearSyncUI_RefreshLootList()
 
     lootListOffset = 0
     scrollBar:SetValue(0)
-    GearSyncUI_UpdateLootList()
+    GearScoreUI_UpdateLootList()
 end
 
 -- Show the loot list window
-function GearSyncUI_ShowLootList()
-    GearSyncUI_RefreshLootList()
+function GearScoreUI_ShowLootList()
+    GearScoreUI_RefreshLootList()
     lootListFrame:Show()
 end
 
@@ -775,26 +775,26 @@ pendingText:SetText("Pending items: 0")
 -- STATUS UPDATE
 -- ============================================================================
 
-function GearSyncUI_UpdateStatus()
-    local lootCount = GearSync_GetLootDBCount and GearSync_GetLootDBCount() or 0
+function GearScoreUI_UpdateStatus()
+    local lootCount = GearScore_GetLootDBCount and GearScore_GetLootDBCount() or 0
     itemsText:SetText("Items collected: " .. lootCount)
 
     local upgradeCount = 0
-    if GearSyncUpgrades then
-        for _ in pairs(GearSyncUpgrades) do
+    if GearScoreUpgrades then
+        for _ in pairs(GearScoreUpgrades) do
             upgradeCount = upgradeCount + 1
         end
     end
     upgradesText:SetText("Upgrades loaded: " .. upgradeCount)
 
-    local enabled = GearSyncSettings.lootEnabled
+    local enabled = GearScoreSettings.lootEnabled
     if enabled then
         lootStatusText:SetText("Loot collection: |cFF00FF00ON|r")
     else
         lootStatusText:SetText("Loot collection: |cFFFF0000OFF|r")
     end
 
-    local pendingCount = GearSync_GetPendingCount and GearSync_GetPendingCount() or 0
+    local pendingCount = GearScore_GetPendingCount and GearScore_GetPendingCount() or 0
     pendingText:SetText("Pending items: " .. pendingCount)
 end
 
@@ -810,7 +810,7 @@ initFrame:SetScript("OnEvent", function()
 
     -- Sync toggle states
     if lootToggle.SetChecked then
-        if GearSyncSettings.lootEnabled then
+        if GearScoreSettings.lootEnabled then
             lootToggle:SetChecked(1)
         else
             lootToggle:SetChecked(nil)
@@ -818,7 +818,7 @@ initFrame:SetScript("OnEvent", function()
     end
 
     if talentToggle.SetChecked then
-        if GearSyncSettings.talentsEnabled then
+        if GearScoreSettings.talentsEnabled then
             talentToggle:SetChecked(1)
         else
             talentToggle:SetChecked(nil)
@@ -826,16 +826,16 @@ initFrame:SetScript("OnEvent", function()
     end
 
     if debugToggle.SetChecked then
-        if GearSyncSettings.debugLog then
+        if GearScoreSettings.debugLog then
             debugToggle:SetChecked(1)
         else
             debugToggle:SetChecked(nil)
         end
     end
 
-    if GearSync_SetLootEnabled then
-        GearSync_SetLootEnabled(GearSyncSettings.lootEnabled)
+    if GearScore_SetLootEnabled then
+        GearScore_SetLootEnabled(GearScoreSettings.lootEnabled)
     end
 
-    GearSyncUI_UpdateStatus()
+    GearScoreUI_UpdateStatus()
 end)

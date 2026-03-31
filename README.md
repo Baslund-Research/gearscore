@@ -1,4 +1,4 @@
-# GearSync - TurtleLootLine WoW Addon
+# GearScore - TurtleLootLine WoW Addon
 
 A Turtle WoW addon that syncs character gear data and displays upgrade recommendations from TurtleLootLine.
 
@@ -16,7 +16,7 @@ A Turtle WoW addon that syncs character gear data and displays upgrade recommend
    - Windows: `C:\Games\Turtle WoW\Interface\AddOns\`
    - macOS: `~/Applications/Turtle WoW/Interface/AddOns/`
 
-2. Rename the folder to `GearSync` (or keep as `gearscore`)
+2. Rename the folder to `GearScore` (or keep as `gearscore`)
 
 3. Install the TurtleLootLine Desktop Companion app
 
@@ -31,11 +31,11 @@ The addon automatically scans your equipment:
 - When you equip/unequip items
 - When your inventory changes
 
-Data is saved to `SavedVariables/GearSync.lua` which the companion app reads.
+Data is saved to `SavedVariables/GearScore.lua` which the companion app reads.
 
 ### Slash Commands
 
-- `/gs` or `/gearsync` - Base command
+- `/gs` or `/gearscore` - Base command
 - `/gs scan` - Manually scan and save gear
 - `/gs stats` - Show addon statistics
 - `/gs upgrades` - List items with upgrade data
@@ -62,7 +62,7 @@ Hover over any item to see upgrade recommendations:
 
 ## How It Works
 
-1. **Addon scans gear** → Saves to `GearSync.lua` in SavedVariables
+1. **Addon scans gear** → Saves to `GearScore.lua` in SavedVariables
 2. **Desktop companion detects change** → Parses the file
 3. **Companion syncs to API** → Sends character data
 4. **API returns upgrade data** → Companion receives recommendations
@@ -72,9 +72,9 @@ Hover over any item to see upgrade recommendations:
 ## File Structure
 
 ```
-GearSync/
-├── GearSync.toc        # Addon manifest
-├── GearSync.lua        # Main addon code
+GearScore/
+├── GearScore.toc        # Addon manifest
+├── GearScore.lua        # Main addon code
 ├── UpgradeData.lua     # Auto-generated upgrade data
 └── README.md           # This file
 ```
@@ -84,7 +84,7 @@ GearSync/
 The addon saves data in this format:
 
 ```lua
-GearSyncData = {
+GearScoreData = {
     lastUpdated = 1703001234,
     character = "Paleedk",
     realm = "Turtle WoW",
@@ -106,7 +106,7 @@ GearSyncData = {
 The companion app generates `UpgradeData.lua`:
 
 ```lua
-GearSyncUpgrades = {
+GearScoreUpgrades = {
     [12640] = {
         stamina = "+15",
         armor = "+120",
@@ -135,8 +135,8 @@ GearSyncUpgrades = {
 
 ### Addon not loading
 
-1. Check folder name is correct (should be in `Interface/AddOns/GearSync/`)
-2. Check `.toc` file exists and is named `GearSync.toc`
+1. Check folder name is correct (should be in `Interface/AddOns/GearScore/`)
+2. Check `.toc` file exists and is named `GearScore.toc`
 3. Enable addon in character selection screen
 
 ## Requirements

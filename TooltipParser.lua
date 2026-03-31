@@ -1,5 +1,5 @@
 -- ============================================================================
--- TooltipParser - Hidden tooltip stat extraction for GearSync
+-- TooltipParser - Hidden tooltip stat extraction for GearScore
 -- Parses item stats from a hidden tooltip frame (Vanilla 1.12 / Lua 5.0)
 -- ============================================================================
 
@@ -8,7 +8,7 @@ local scanTooltip = nil
 
 local function GetScanTooltip()
     if not scanTooltip then
-        scanTooltip = CreateFrame("GameTooltip", "GearSyncScanTooltip", UIParent, "GameTooltipTemplate")
+        scanTooltip = CreateFrame("GameTooltip", "GearScoreScanTooltip", UIParent, "GameTooltipTemplate")
         scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
     end
     return scanTooltip
@@ -114,7 +114,7 @@ local EQUIP_PATTERNS = {
 
 -- Get text from a tooltip line
 local function GetTooltipLine(lineNum)
-    local fontString = getglobal("GearSyncScanTooltipTextLeft" .. lineNum)
+    local fontString = getglobal("GearScoreScanTooltipTextLeft" .. lineNum)
     if fontString then
         return fontString:GetText()
     end
@@ -123,7 +123,7 @@ end
 
 -- Get text from the right side of a tooltip line
 local function GetTooltipLineRight(lineNum)
-    local fontString = getglobal("GearSyncScanTooltipTextRight" .. lineNum)
+    local fontString = getglobal("GearScoreScanTooltipTextRight" .. lineNum)
     if fontString then
         return fontString:GetText()
     end
@@ -270,7 +270,7 @@ end
 
 -- Parse an item link and return full stat data
 -- Returns nil if item is not cached (caller should retry)
-function GearSync_ParseItemTooltip(itemLink)
+function GearScore_ParseItemTooltip(itemLink)
     if not itemLink then return nil end
 
     -- Extract the "item:ID:X:X:X" portion from the full link

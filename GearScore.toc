@@ -1,13 +1,13 @@
 ## Interface: 11200
-## Title: GearSync
+## Title: GearScore
 ## Notes: Syncs gear to TurtleLootLine and displays upgrade recommendations
 ## Author: Ronni
 ## Version: 1.2.0
-## SavedVariables: GearSyncLootDB
-## SavedVariablesPerCharacter: GearSyncData, GearSyncSettings
+## SavedVariables: GearScoreLootDB
+## SavedVariablesPerCharacter: GearScoreData, GearScoreSettings
 
 TooltipParser.lua
 LootCollector.lua
-GearSync.lua
+GearScore.lua
 UpgradeData.lua
-GearSyncUI.lua
+GearScoreUI.lua

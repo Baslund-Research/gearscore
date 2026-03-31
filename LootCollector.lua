@@ -1,10 +1,10 @@
 -- ============================================================================
--- LootCollector - Captures items from all in-game sources for GearSync
+-- LootCollector - Captures items from all in-game sources for GearScore
 -- Stores item data account-wide for TurtleLootLine sync
 -- ============================================================================
 
 -- Account-wide SavedVariable
-GearSyncLootDB = GearSyncLootDB or {}
+GearScoreLootDB = GearScoreLootDB or {}
 
 -- ============================================================================
 -- CONSTANTS
@@ -24,11 +24,11 @@ local pendingItems = {}  -- { [itemId] = { link=, sources={}, retries=0 } }
 local retryTimer = 0
 local lootCollectionEnabled = true
 
-function GearSync_SetLootEnabled(enabled)
+function GearScore_SetLootEnabled(enabled)
     lootCollectionEnabled = enabled
 end
 
-function GearSync_GetLootEnabled()
+function GearScore_GetLootEnabled()
     return lootCollectionEnabled
 end
 
@@ -43,12 +43,12 @@ local lootFrame = CreateFrame("Frame")
 -- ============================================================================
 
 local function Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync Loot]|r " .. msg)
+    DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearScore Loot]|r " .. msg)
 end
 
 local function PrintDebug(msg)
-    if GearSyncSettings and GearSyncSettings.debugLog == false then return end
-    DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearSync Loot]|r " .. msg)
+    if GearScoreSettings and GearScoreSettings.debugLog == false then return end
+    DEFAULT_CHAT_FRAME:AddMessage("|cFF00FF00[GearScore Loot]|r " .. msg)
 end
 
 -- Extract item ID from an item link
@@ -80,15 +80,15 @@ end
 -- ============================================================================
 
 local function InitDB()
-    if not GearSyncLootDB.version then
-        GearSyncLootDB = {
+    if not GearScoreLootDB.version then
+        GearScoreLootDB = {
             version = 1,
             lastUpdated = 0,
             items = {},
         }
     end
-    if not GearSyncLootDB.items then
-        GearSyncLootDB.items = {}
+    if not GearScoreLootDB.items then
+        GearScoreLootDB.items = {}
     end
 end
 
@@ -142,13 +142,13 @@ local function ProcessItem(itemId, itemLink, sources)
     end
 
     -- Parse tooltip for detailed stats
-    local parsed = GearSync_ParseItemTooltip(itemLink)
+    local parsed = GearScore_ParseItemTooltip(itemLink)
     if not parsed then
         return false  -- Tooltip not ready, retry later
     end
 
     -- Build or update DB entry
-    local existing = GearSyncLootDB.items[itemId]
+    local existing = GearScoreLootDB.items[itemId]
     local now = time()
 
     if not existing then
@@ -175,7 +175,7 @@ local function ProcessItem(itemId, itemLink, sources)
             firstSeen = now,
             lastSeen = now,
         }
-        GearSyncLootDB.items[itemId] = existing
+        GearScoreLootDB.items[itemId] = existing
     else
         -- Update last seen
         existing.lastSeen = now
@@ -195,7 +195,7 @@ local function ProcessItem(itemId, itemLink, sources)
         end
     end
 
-    GearSyncLootDB.lastUpdated = now
+    GearScoreLootDB.lastUpdated = now
     return true
 end
 
@@ -436,7 +436,7 @@ local function OnEvent()
         end
 
         local count = 0
-        for _ in pairs(GearSyncLootDB.items) do
+        for _ in pairs(GearScoreLootDB.items) do
             count = count + 1
         end
         PrintDebug(string.format("Loot database: %d items (scanning equipped + bags)", count))
@@ -465,15 +465,15 @@ lootFrame:RegisterEvent("CHAT_MSG_SYSTEM")
 -- PUBLIC DEBUG API
 -- ============================================================================
 
-function GearSync_GetLootDBCount()
+function GearScore_GetLootDBCount()
     local count = 0
-    for _ in pairs(GearSyncLootDB.items) do
+    for _ in pairs(GearScoreLootDB.items) do
         count = count + 1
     end
     return count
 end
 
-function GearSync_GetPendingCount()
+function GearScore_GetPendingCount()
     local count = 0
     for _ in pairs(pendingItems) do
         count = count + 1
