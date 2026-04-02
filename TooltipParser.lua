@@ -218,6 +218,24 @@ local function ParseLine(line, result)
         return
     end
 
+    -- Use effects: "Use: ..."
+    local _, _, useText = string.find(line, "^Use: (.+)")
+    if useText then
+        if not result.use then result.use = {} end
+        table.insert(result.use, useText)
+        return
+    end
+
+    -- Recipe/Pattern/Plans/Schematic: "Recipe: ...", "Pattern: ...", etc.
+    local _, _, recipeType, recipeText = string.find(line, "^(%a+): (.+)")
+    if recipeType and (recipeType == "Recipe" or recipeType == "Pattern" or recipeType == "Plans"
+        or recipeType == "Schematic" or recipeType == "Formula" or recipeType == "Design"
+        or recipeType == "Teaches") then
+        result.teachesType = recipeType
+        result.teaches = recipeText
+        return
+    end
+
     -- Weapon damage: "89 - 165 Damage"
     local _, _, dmgMin, dmgMax = string.find(line, "^(%d+) %- (%d+) Damage$")
     if dmgMin and dmgMax then
@@ -305,6 +323,9 @@ function GearScore_ParseItemTooltip(itemLink)
         dps = nil,
         stats = {},
         equip = {},
+        use = nil,
+        teaches = nil,
+        teachesType = nil,
     }
 
     -- Iterate through tooltip lines (up to 30)

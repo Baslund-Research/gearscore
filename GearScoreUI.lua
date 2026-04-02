@@ -715,7 +715,7 @@ function GearScoreUI_RefreshLootList()
             itemId = itemId,
             name = item.name,
             quality = item.quality or 0,
-            slot = item.equipSlot or item.armorType or "",
+            slot = item.equipSlot or item.armorType or item.itemType or "",
             link = item.link,
         })
     end

@@ -260,6 +260,9 @@ local function QueueItem(itemLink, source)
     end
 end
 
+-- Expose QueueItem globally for WantedItems scanner
+GearScore_QueueItem = QueueItem
+
 -- ============================================================================
 -- CAPTURE CHANNEL 1: LOOT WINDOW
 -- ============================================================================
