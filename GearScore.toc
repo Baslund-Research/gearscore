@@ -4,10 +4,11 @@
 ## Author: Ronni
 ## Version: 1.2.0
 ## SavedVariables: GearScoreLootDB
-## SavedVariablesPerCharacter: GearScoreData, GearScoreSettings
+## SavedVariablesPerCharacter: GearScoreData, GearScoreSettings, GearScoreInventory
 
 TooltipParser.lua
 LootCollector.lua
+-- WantedItems.lua
 GearScore.lua
 UpgradeData.lua
 GearScoreUI.lua
